@@ -95,7 +95,8 @@ heroku buildpacks:add heroku/python
 4. Set the target to your app’s webhook URL, for example:
    - `https://<your-app>.herokuapp.com/webhooks/cloudmailin`
    - or your custom domain equivalent
-5. Save changes. Send a test email to `CLOUDMAILIN_FORWARD_ADDRESS` (or a plus-address variant) and verify a 202 response in app logs.
+5. Choose JSON - Normalized (recommended) for the POST format
+6. Save changes. Send a test email to `CLOUDMAILIN_FORWARD_ADDRESS` (or a plus-address variant) and verify a 202 response in app logs.
 
 Note: CloudMailIn accepts messages on 2xx, bounces on 4xx, and retries on 5xx.
 
