@@ -23,7 +23,8 @@ def _csv(name: str) -> Optional[list[str]]:
 
 
 class Settings:
-    redis_url: str = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+    # Prefer REDIS_URL if present; otherwise use REDIS (Heroku Key-Value Store)
+    redis_url: str = os.getenv("REDIS_URL") or os.getenv("REDIS", "redis://localhost:6379/0")
 
     webhook_secret: Optional[str] = os.getenv("WEBHOOK_SECRET")
     forward_address: str = os.getenv("CLOUDMAILIN_FORWARD_ADDRESS", "")

@@ -5,6 +5,9 @@
   - RQ worker for simulation jobs
   - Direct open via image fetch; randomized clicks
   - Redis-backed idempotency
-  - Heroku `Procfile`, `runtime.txt`, `app.json` (one-click deploy)
+  - Heroku `Procfile`, `.python-version`, `app.json` (one-click deploy)
   - README with setup and deploy instructions
   - Initial tests (unit + integration)
+
+### Changed
+- Replaced deprecated `runtime.txt` with `.python-version` specifying `3.11` to receive latest patch updates automatically.

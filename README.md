@@ -36,7 +36,7 @@ app/
 Environment variables:
 - `CLOUDMAILIN_FORWARD_ADDRESS` (required): `c96be77c591e99f5c6bf@cloudmailin.net`
 - `WEBHOOK_SECRET` (optional): shared secret header `X-Webhook-Secret`
-- `REDIS_URL`: provided by Heroku Redis
+- `REDIS` or `REDIS_URL`: connection URL (Heroku Key-Value Store uses `REDIS`; classic Heroku Redis often uses `REDIS_URL`)
 - `SIMULATE_WITH_BROWSER` (default `false`): optional headless path (not enabled by default)
 - `SIMULATE_OPEN_PROBABILITY` (default `0.7`)
 - `SIMULATE_CLICK_PROBABILITY` (default `0.3`)
@@ -46,23 +46,23 @@ Environment variables:
 - `REQUEST_TIMEOUT_MS` (default `8000`)
 
 ## Local Development
-1. Python 3.11+
+1. Python 3.11+ (version managed via `.python-version`, currently `3.11`)
 2. Redis (e.g., `docker run -p 6379:6379 redis:7`)
 3. Create `.env` (or export env vars)
 4. Install deps: `pip install -r requirements.txt`
 5. Run web: `uvicorn app.web:app --reload --port 8000`
-6. Run worker: `rq worker --url $REDIS_URL email_simulator`
+6. Run worker: `rq worker --url ${REDIS_URL:-$REDIS} email_simulator`
 
 Webhook endpoint: `POST http://localhost:8000/webhooks/cloudmailin`
 
 ## Heroku Deployment
 This repo includes:
 - `Procfile` (web + worker)
-- `runtime.txt` (Python)
+- `.python-version` (Python major version)
 - `app.json` (one-click deploy + addons)
 
 Using the one-click button opens Heroku’s deploy UI pre-configured with:
-- Add-ons: CloudMailIn (`cloudmailin:starter`) and Heroku Redis (`hobby-dev`)
+- Add-ons: CloudMailIn (`cloudmailin:starter`) and Heroku Redis / Key-Value Store
 - Buildpack: heroku/python
 - Formation: 1× web, 1× worker
 
@@ -70,7 +70,7 @@ To manually deploy:
 ```bash
 heroku git:remote -a bob-net
 heroku buildpacks:add heroku/python
-# Ensure addons exist:
+# Ensure addons exist (Key-Value Store/Redis sets REDIS env; classic Redis often sets REDIS_URL)
 # heroku addons:create cloudmailin:starter --app bob-net --target=https://bob-net.herokuapp.com/webhooks/cloudmailin
 # heroku addons:create heroku-redis:hobby-dev --app bob-net
 # Set config vars as needed
