@@ -11,3 +11,4 @@
 
 ### Changed
 - Replaced deprecated `runtime.txt` with `.python-version` specifying `3.11` to receive latest patch updates automatically.
+- Redis TLS: honor `REDIS_SSL_CERT_REQS` (default `none`) to handle self-signed certificate chains presented by some managed instances.

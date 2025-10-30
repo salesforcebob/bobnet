@@ -36,7 +36,8 @@ app/
 Environment variables:
 - `CLOUDMAILIN_FORWARD_ADDRESS` (required): `c96be77c591e99f5c6bf@cloudmailin.net`
 - `WEBHOOK_SECRET` (optional): shared secret header `X-Webhook-Secret`
-- `REDIS` or `REDIS_URL`: connection URL (Heroku Key-Value Store uses `REDIS`; classic Heroku Redis often uses `REDIS_URL`)
+- `REDIS` or `REDIS_URL`: connection URL (Heroku Key-Value Store uses `REDIS_URL`)
+- `REDIS_SSL_CERT_REQS` (default `none`): Redis TLS cert verification mode; set to `required` if your provider presents a trusted chain
 - `SIMULATE_WITH_BROWSER` (default `false`): optional headless path (not enabled by default)
 - `SIMULATE_OPEN_PROBABILITY` (default `0.7`)
 - `SIMULATE_CLICK_PROBABILITY` (default `0.3`)
@@ -70,10 +71,11 @@ To manually deploy:
 ```bash
 heroku git:remote -a bob-net
 heroku buildpacks:add heroku/python
-# Ensure addons exist (Key-Value Store/Redis sets REDIS env; classic Redis often sets REDIS_URL)
+# Ensure addons exist
 # heroku addons:create cloudmailin:starter --app bob-net --target=https://bob-net.herokuapp.com/webhooks/cloudmailin
 # heroku addons:create heroku-redis:hobby-dev --app bob-net
-# Set config vars as needed
+# If you encounter Redis TLS certificate verification issues, set:
+# heroku config:set REDIS_SSL_CERT_REQS=none --app bob-net
 # Push code (main is auto-deployed in your setup)
 ```
 
