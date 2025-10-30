@@ -6,8 +6,8 @@ import time
 from typing import Any, Dict
 
 from .config import settings
-from .simulate.html_parse import extract_image_sources, extract_links
-from .simulate.openers import simulate_open_via_direct
+from .simulate.html_parse import extract_image_sources, extract_links, find_exacttarget_open_pixel
+from .simulate.openers import simulate_open_via_direct, fetch_single_url
 from .simulate.clickers import filter_links, choose_links, perform_clicks
 from .utils.user_agents import pick_user_agent
 
@@ -46,8 +46,15 @@ def process_mail(job: Dict[str, Any]) -> Dict[str, Any]:
 
     opened = False
     if random.random() < settings.simulate_open_probability:
+        # Always prioritize ExactTarget/SFMC open pixel when present
+        special_pixel = find_exacttarget_open_pixel(html)
+        if special_pixel:
+            if fetch_single_url(special_pixel, headers, timeout_seconds):
+                opened = True
         images = extract_image_sources(html)
-        opened = simulate_open_via_direct(images, headers, timeout_seconds)
+        if special_pixel and special_pixel in images:
+            images = [u for u in images if u != special_pixel]
+        opened = simulate_open_via_direct(images, headers, timeout_seconds) or opened
 
     clicks = 0
     if random.random() < settings.simulate_click_probability:

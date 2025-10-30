@@ -6,6 +6,17 @@ import httpx
 logger = logging.getLogger(__name__)
 
 
+def fetch_single_url(url: str, headers: dict, timeout_seconds: float) -> bool:
+    try:
+        with httpx.Client(timeout=timeout_seconds, follow_redirects=True, headers=headers) as client:
+            resp = client.get(url)
+            logger.info("open_pixel_fetch", extra={"url": url, "status": resp.status_code})
+            return 200 <= resp.status_code < 400
+    except Exception as e:
+        logger.warning("open_pixel_fetch_error", extra={"url": url, "error": str(e)})
+        return False
+
+
 def simulate_open_via_direct(image_urls: List[str], headers: dict, timeout_seconds: float) -> bool:
     if not image_urls:
         return False

@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import List
+from typing import List, Optional
 from bs4 import BeautifulSoup
 
 
@@ -36,3 +36,20 @@ def extract_links(html: str) -> List[str]:
         seen.add(u)
         uniq.append(u)
     return uniq
+
+
+def find_exacttarget_open_pixel(html: str) -> Optional[str]:
+    """Return the ExactTarget/SFMC open pixel URL if present.
+
+    Specifically searches for an <img> whose src contains
+    '://cl.s4.exct.net/open.aspx' (case-insensitive).
+    """
+    soup = BeautifulSoup(html or "", "html.parser")
+    for img in soup.find_all("img"):
+        src = img.get("src")
+        if not src:
+            continue
+        low = src.lower()
+        if "://cl.s4.exct.net/open.aspx" in low:
+            return src
+    return None
