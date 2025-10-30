@@ -26,7 +26,7 @@
   },
   "addons": [
     {"plan": "cloudmailin:starter"},
-    {"plan": "heroku-redis:hobby-dev"}
+    {"plan": "heroku-redis:mini"}
   ],
   "buildpacks": [
     {"url": "heroku/python"}
