@@ -2,7 +2,7 @@
 
 Simulates customer behavior (opens and clicks) on inbound marketing emails delivered via CloudMailIn. Runs on Heroku with a `web` dyno (FastAPI webhook) and a `worker` dyno (RQ).
 
-[![Deploy to Heroku](https://www.herokucdn.com/deploy/button.svg)](https://heroku.com/deploy)
+[![Deploy to Heroku](https://www.herokucdn.com/deploy/button.svg)](https://heroku.com/deploy?template=https://github.com/salesforcebob/bobnet)
 
 ## Features
 - Receives CloudMailIn JSON webhook and enqueues jobs
