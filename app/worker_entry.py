@@ -1,5 +1,6 @@
 from __future__ import annotations
-from rq import Worker, Queue, Connection
+from rq import Worker, Queue
+from rq.connections import Connection
 from .queue import get_redis
 
 
