@@ -4,6 +4,8 @@ Simulates customer behavior (opens and clicks) on inbound marketing emails deliv
 
 [![Deploy to Heroku](https://www.herokucdn.com/deploy/button.svg)](https://heroku.com/deploy?template=https://github.com/salesforcebob/bobnet)
 
+Just name it. Defaults are good.
+
 ## Features
 - Receives CloudMailIn JSON webhook and enqueues jobs
 - Randomized open simulation via direct pixel fetch (default)
@@ -33,7 +35,9 @@ app/
     user_agents.py       # UA rotation
 ```
 
-## Configuration
+## Configuration (Automated)
+* Envs can be adjusted via the installer or the Heroku Dashboard after deployment
+
 Environment variables:
 - `CLOUDMAILIN_FORWARD_ADDRESS` (required): `xxxxxx@cloudmailin.net`
 - `WEBHOOK_SECRET` (optional): shared secret header `X-Webhook-Secret`
