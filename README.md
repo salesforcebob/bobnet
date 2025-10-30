@@ -13,6 +13,10 @@ Just name it. Defaults are good.
 - Idempotency by message-id (Redis NX key)
 - Structured JSON logging
 
+# Quick Start
+- After installing, check your Heroku Config Vars on the Settings tab to get your CLOUDMAILIN_FORWARD_ADDRESS value, ie 12345566@cloudmailin.net
+- You can then use a '+' with that single address to create variations with no additional setup required, ie 12345566+bobisanerd@cloudmailin.net
+
 ## CloudMailIn Reference
 - Heroku Dev Center — Receiving Email with Heroku: https://devcenter.heroku.com/articles/cloudmailin#receiving-email-with-heroku
 
