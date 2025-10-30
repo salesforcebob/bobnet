@@ -35,7 +35,7 @@ app/
 
 ## Configuration
 Environment variables:
-- `CLOUDMAILIN_FORWARD_ADDRESS` (required): `c96be77c591e99f5c6bf@cloudmailin.net`
+- `CLOUDMAILIN_FORWARD_ADDRESS` (required): `xxxxxx@cloudmailin.net`
 - `WEBHOOK_SECRET` (optional): shared secret header `X-Webhook-Secret`
 - `REDIS` or `REDIS_URL`: connection URL (Heroku Key-Value Store uses `REDIS_URL`)
 - `REDIS_SSL_CERT_REQS` (default `none`): Redis TLS cert verification mode; set to `required` if your provider presents a trusted chain
