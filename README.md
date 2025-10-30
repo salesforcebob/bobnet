@@ -2,7 +2,7 @@
 
 Simulates customer behavior (opens and clicks) on inbound marketing emails delivered via CloudMailIn. Runs on Heroku with a `web` dyno (FastAPI webhook) and a `worker` dyno (RQ).
 
-[Deploy to Heroku](https://heroku.com/deploy)
+[![Deploy to Heroku](https://www.herokucdn.com/deploy/button.svg)](https://heroku.com/deploy)
 
 ## Features
 - Receives CloudMailIn JSON webhook and enqueues jobs
@@ -79,6 +79,17 @@ heroku buildpacks:add heroku/python
 # heroku config:set REDIS_SSL_CERT_REQS=none --app bob-net
 # Push code (main is auto-deployed in your setup)
 ```
+
+### CloudMailIn Target Setup
+1. In your Heroku app, open the Resources tab and click the CloudMailIn add-on.
+2. In the CloudMailIn dashboard, under "Receive Email", locate your email address row and click "Manage".
+3. Click the "Edit Target" button.
+4. Set the target to your app’s webhook URL, for example:
+   - `https://<your-app>.herokuapp.com/webhooks/cloudmailin`
+   - or your custom domain equivalent
+5. Save changes. Send a test email to `CLOUDMAILIN_FORWARD_ADDRESS` (or a plus-address variant) and verify a 202 response in app logs.
+
+Note: CloudMailIn accepts messages on 2xx, bounces on 4xx, and retries on 5xx.
 
 ## Testing
 - Unit tests cover HTML parsing, plus-tag detection, idempotency.
