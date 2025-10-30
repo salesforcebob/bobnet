@@ -4,13 +4,8 @@
   "repository": "",
   "keywords": ["fastapi", "heroku", "cloudmailin", "rq", "redis"],
   "env": {
-    "CLOUDMAILIN_FORWARD_ADDRESS": {
-      "description": "Shared forward address for plus addressing.",
-      "required": true,
-      "value": "c96be77c591e99f5c6bf@cloudmailin.net"
-    },
     "WEBHOOK_SECRET": {
-      "description": "Shared secret required on webhook requests (X-Webhook-Secret).",
+      "description": "(optional)Shared secret required on webhook requests (X-Webhook-Secret).",
       "required": false
     },
     "SIMULATE_WITH_BROWSER": {
