@@ -19,6 +19,7 @@ Simulates customer behavior (opens and clicks) on inbound marketing emails deliv
 app/
   web.py                 # FastAPI app (webhook + health)
   worker.py              # RQ worker job
+  worker_entry.py        # Worker entrypoint (uses configured Redis w/ SSL settings)
   config.py              # Env configuration
   logging.py             # JSON logging
   models.py              # Pydantic models
@@ -52,7 +53,7 @@ Environment variables:
 3. Create `.env` (or export env vars)
 4. Install deps: `pip install -r requirements.txt`
 5. Run web: `uvicorn app.web:app --reload --port 8000`
-6. Run worker: `rq worker --url ${REDIS_URL:-$REDIS} email_simulator`
+6. Run worker: `python -m app.worker_entry`
 
 Webhook endpoint: `POST http://localhost:8000/webhooks/cloudmailin`
 
