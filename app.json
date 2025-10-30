@@ -1,0 +1,39 @@
+{
+  "name": "BobNet Email Simulator",
+  "description": "Heroku app to simulate email opens/clicks from CloudMailIn inbound emails (FastAPI + RQ).",
+  "repository": "",
+  "keywords": ["fastapi", "heroku", "cloudmailin", "rq", "redis"],
+  "env": {
+    "CLOUDMAILIN_FORWARD_ADDRESS": {
+      "description": "Shared forward address for plus addressing.",
+      "required": true,
+      "value": "c96be77c591e99f5c6bf@cloudmailin.net"
+    },
+    "WEBHOOK_SECRET": {
+      "description": "Shared secret required on webhook requests (X-Webhook-Secret).",
+      "required": false
+    },
+    "SIMULATE_WITH_BROWSER": {
+      "description": "Use headless browser for opens (false = direct fetch).",
+      "required": false,
+      "value": "false"
+    },
+    "SIMULATE_OPEN_PROBABILITY": {"value": "0.7"},
+    "SIMULATE_CLICK_PROBABILITY": {"value": "0.3"},
+    "MAX_CLICKS": {"value": "2"},
+    "OPEN_DELAY_RANGE_MS": {"value": "500,5000"},
+    "CLICK_DELAY_RANGE_MS": {"value": "300,4000"},
+    "REQUEST_TIMEOUT_MS": {"value": "8000"}
+  },
+  "formation": {
+    "web": {"quantity": 1, "size": "eco"},
+    "worker": {"quantity": 1, "size": "eco"}
+  },
+  "addons": [
+    {"plan": "cloudmailin:starter"},
+    {"plan": "heroku-redis:hobby-dev"}
+  ],
+  "buildpacks": [
+    {"url": "heroku/python"}
+  ]
+}
