@@ -5,7 +5,7 @@ from .logging import configure_json_logging
 
 
 def main() -> None:
-    # Configure JSON logging for structured output to Heroku logs
+    # Configure JSON logging for worker process
     configure_json_logging()
     
     # Use explicit connection to avoid reliance on Connection context manager
