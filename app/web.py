@@ -1,12 +1,14 @@
 from __future__ import annotations
 import hashlib
+import json
 import logging
-from fastapi import FastAPI, Header, HTTPException, Response, status
+from fastapi import FastAPI, Form, Header, HTTPException, Response, status
 from .config import settings
 from .logging import configure_json_logging
-from .models import IncomingMail
+from .models import IncomingMail, MailgunInbound
 from .queue import get_queue, get_redis
 from .utils.idempotency import mark_if_first
+from .utils.mailgun_signature import verify_mailgun_signature, is_signature_verification_enabled
 
 
 configure_json_logging()
@@ -55,4 +57,107 @@ async def cloudmailin_webhook(mail: IncomingMail, response: Response, x_webhook_
 
     logger.info("enqueued_message", extra={"message_id": message_id, "job_id": job.id})
     response.status_code = status.HTTP_202_ACCEPTED
+    return {"status": "enqueued", "message_id": message_id, "job_id": job.id}
+
+
+# -----------------------------------------------------------------------------
+# Mailgun Webhook Endpoint
+# -----------------------------------------------------------------------------
+
+def _extract_message_id_from_mailgun_headers(message_headers: str | None) -> str | None:
+    """
+    Extract Message-Id from Mailgun's message-headers JSON string.
+
+    Mailgun provides headers as a JSON array of [name, value] pairs, e.g.:
+    [["Message-Id", "<abc123@example.com>"], ["Subject", "Hello"], ...]
+
+    Args:
+        message_headers: JSON string of header pairs from Mailgun.
+
+    Returns:
+        The Message-Id value if found, None otherwise.
+    """
+    if not message_headers:
+        return None
+    try:
+        headers = json.loads(message_headers)
+        for header in headers:
+            if isinstance(header, list) and len(header) >= 2:
+                name, value = header[0], header[1]
+                if name.lower() == "message-id":
+                    return value
+    except (json.JSONDecodeError, TypeError):
+        pass
+    return None
+
+
+@app.post("/webhooks/mailgun")
+async def mailgun_webhook(
+    response: Response,
+    # Mailgun sends form-encoded data, not JSON
+    recipient: str = Form(...),
+    sender: str = Form(default=""),
+    subject: str = Form(default=""),
+    body_html: str | None = Form(default=None, alias="body-html"),
+    body_plain: str | None = Form(default=None, alias="body-plain"),
+    message_headers: str | None = Form(default=None, alias="message-headers"),
+    timestamp: str = Form(default=""),
+    token: str = Form(default=""),
+    signature: str = Form(default=""),
+):
+    """
+    Webhook endpoint for Mailgun inbound email routing.
+
+    Mailgun posts form-encoded data (not JSON) when forwarding inbound emails
+    via Routes. This endpoint normalizes the payload to match the internal
+    job format used by the worker.
+
+    Security: If MAILGUN_SIGNING_KEY is configured, webhook signatures are
+    verified using HMAC-SHA256. If not configured, all requests are accepted.
+    """
+    # Verify signature if signing key is configured
+    if is_signature_verification_enabled(settings.mailgun_signing_key):
+        if not verify_mailgun_signature(
+            signing_key=settings.mailgun_signing_key,
+            timestamp=timestamp,
+            token=token,
+            signature=signature,
+        ):
+            logger.warning("mailgun_signature_invalid", extra={"recipient": recipient})
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="invalid signature",
+            )
+
+    # Optional: Validate recipient matches configured domain
+    if settings.mailgun_domain:
+        if not recipient.endswith(f"@{settings.mailgun_domain}"):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="invalid recipient domain",
+            )
+
+    # Extract Message-Id from headers for idempotency
+    message_id = _extract_message_id_from_mailgun_headers(message_headers)
+    if not message_id:
+        # Fallback to hash of subject+recipient for idempotency
+        message_id = hashlib.sha256(f"{subject}-{recipient}".encode("utf-8")).hexdigest()
+
+    # Use shared idempotency key prefix for consistency
+    idem_key = f"mailgun:msg:{message_id}"
+    first = mark_if_first(get_redis(), idem_key, settings.idempotency_ttl_seconds)
+    if not first:
+        logger.info("duplicate_message_skipped", extra={"message_id": message_id, "provider": "mailgun"})
+        response.status_code = status.HTTP_200_OK
+        return {"status": "duplicate", "message_id": message_id}
+
+    # Enqueue job with normalized payload (same format as CloudMailIn)
+    job = get_queue().enqueue("app.worker.process_mail", {
+        "message_id": message_id,
+        "to": recipient,
+        "html": body_html,
+    })
+
+    logger.info("enqueued_message", extra={"message_id": message_id, "job_id": job.id, "provider": "mailgun"})
+    response.status_code = status.HTTP_200_OK
     return {"status": "enqueued", "message_id": message_id, "job_id": job.id}

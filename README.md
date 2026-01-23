@@ -1,34 +1,55 @@
 # BobNet Email Simulator
 
-Simulates customer behavior (opens and clicks) on inbound marketing emails delivered via CloudMailIn. Runs on Heroku with a `web` dyno (FastAPI webhook) and a `worker` dyno (RQ).
+Simulates customer behavior (opens and clicks) on inbound marketing emails. Runs on Heroku with a `web` dyno (FastAPI webhook) and a `worker` dyno (RQ).
 
 [![Deploy to Heroku](https://www.herokucdn.com/deploy/button.svg)](https://heroku.com/deploy?template=https://github.com/salesforcebob/bobnet)
 
 Just name it. Defaults are good.
 
 ## Features
-- Receives CloudMailIn JSON webhook and enqueues jobs
+- Dual inbound email provider support: **CloudMailIn** and **Mailgun**
 - Randomized open simulation via direct pixel fetch (default)
 - Randomized click simulation with domain allow/deny filters
 - Idempotency by message-id (Redis NX key)
 - Structured JSON logging
+- HMAC signature verification for Mailgun webhooks
 
-# Quick Start
-- After installing, check your Heroku Config Vars on the Settings tab to get your CLOUDMAILIN_FORWARD_ADDRESS value, ie 12345566@cloudmailin.net
-- You can then use a '+' with that single address to create variations with no additional setup required, ie 12345566+bobisanerd@cloudmailin.net
+## Inbound Email Providers
 
-## CloudMailIn Reference
-- Heroku Dev Center — Receiving Email with Heroku: https://devcenter.heroku.com/articles/cloudmailin#receiving-email-with-heroku
+This app supports two inbound email providers that can run simultaneously:
+
+| Provider | Webhook Endpoint | Payload Format | Best For |
+|----------|-----------------|----------------|----------|
+| CloudMailIn | `/webhooks/cloudmailin` | JSON | Heroku add-on convenience |
+| Mailgun | `/webhooks/mailgun` | Form-encoded | High volume (unlimited inbound) |
+
+Both endpoints normalize payloads to the same internal format, so the worker processes them identically.
+
+## Quick Start
+
+### Option A: CloudMailIn (Heroku Add-on)
+1. After installing, check your Heroku Config Vars to get `CLOUDMAILIN_FORWARD_ADDRESS` (e.g., `12345566@cloudmailin.net`)
+2. Use plus-addressing for variations: `12345566+bobisanerd@cloudmailin.net`
+
+### Option B: Mailgun (Recommended for High Volume)
+1. Sign up for Mailgun Foundation plan ($35/month, unlimited inbound emails)
+2. Add your domain and configure MX records (see [Mailgun Setup](#mailgun-setup) below)
+3. Create an inbound route pointing to `https://<your-app>.herokuapp.com/webhooks/mailgun`
+4. Set `MAILGUN_SIGNING_KEY` and optionally `MAILGUN_DOMAIN` in Heroku config vars
+
+## Provider References
+- **CloudMailIn**: [Heroku Dev Center — Receiving Email](https://devcenter.heroku.com/articles/cloudmailin#receiving-email-with-heroku)
+- **Mailgun**: [Inbound Email Routing](https://documentation.mailgun.com/docs/mailgun/user-manual/receive-forward-store/routes)
 
 ## Project Layout
 ```
 app/
-  web.py                 # FastAPI app (webhook + health)
+  web.py                 # FastAPI app (webhooks + health)
   worker.py              # RQ worker job
   worker_entry.py        # Worker entrypoint (uses configured Redis w/ SSL settings)
   config.py              # Env configuration
   logging.py             # JSON logging
-  models.py              # Pydantic models
+  models.py              # Pydantic models (CloudMailIn + Mailgun)
   queue.py               # Redis + RQ setup
   simulate/
     html_parse.py        # HTML parsing helpers
@@ -36,16 +57,26 @@ app/
     clickers.py          # Click selection + execution
   utils/
     idempotency.py       # Redis NX TTL helper
+    mailgun_signature.py # Mailgun HMAC signature verification
     user_agents.py       # UA rotation
 ```
 
 ## Configuration (Automated)
 * Envs can be adjusted via the installer or the Heroku Dashboard after deployment
 
-Environment variables:
-- `CLOUDMAILIN_FORWARD_ADDRESS` (required): `xxxxxx@cloudmailin.net`
-- `WEBHOOK_SECRET` (optional): shared secret header `X-Webhook-Secret`
-- `REDIS` or `REDIS_URL`: connection URL (Heroku Key-Value Store uses `REDIS_URL`)
+### Inbound Email Provider Settings
+
+**CloudMailIn** (Heroku add-on):
+- `CLOUDMAILIN_FORWARD_ADDRESS`: Your CloudMailIn address (e.g., `xxxxxx@cloudmailin.net`)
+- `WEBHOOK_SECRET` (optional): Shared secret for `X-Webhook-Secret` header
+
+**Mailgun** (external provider):
+- `MAILGUN_SIGNING_KEY` (recommended): HTTP webhook signing key from Mailgun dashboard (Settings > API Security)
+- `MAILGUN_DOMAIN` (optional): Restrict accepted recipients to this domain (e.g., `inbound.example.com`)
+
+### General Settings
+
+- `REDIS` or `REDIS_URL`: Redis connection URL (Heroku Key-Value Store uses `REDIS_URL`)
 - `REDIS_SSL_CERT_REQS` (default `none`): Redis TLS cert verification mode; set to `required` if your provider presents a trusted chain
 - `SIMULATE_WITH_BROWSER` (default `false`): optional headless path (not enabled by default)
 - `SIMULATE_OPEN_PROBABILITY` (default `0.7`)
@@ -63,7 +94,9 @@ Environment variables:
 5. Run web: `uvicorn app.web:app --reload --port 8000`
 6. Run worker: `python -m app.worker_entry`
 
-Webhook endpoint: `POST http://localhost:8000/webhooks/cloudmailin`
+Webhook endpoints:
+- CloudMailIn: `POST http://localhost:8000/webhooks/cloudmailin` (JSON)
+- Mailgun: `POST http://localhost:8000/webhooks/mailgun` (form-encoded)
 
 ## Heroku Deployment
 This repo includes:
@@ -100,20 +133,51 @@ heroku buildpacks:add heroku/python
 
 Note: CloudMailIn accepts messages on 2xx, bounces on 4xx, and retries on 5xx.
 
+### Mailgun Setup
+Mailgun offers unlimited inbound emails on the Foundation plan ($35/month).
+
+1. **Sign up** at [mailgun.com](https://www.mailgun.com) for the Foundation plan
+2. **Add your domain** (e.g., `inbound.yourdomain.com`) in the Mailgun dashboard
+3. **Configure DNS records** at your DNS provider:
+   - MX: `10 mxa.mailgun.org`
+   - MX: `10 mxb.mailgun.org`
+   - TXT (SPF): `v=spf1 include:mailgun.org ~all`
+   - DKIM record (provided by Mailgun)
+4. **Create an inbound route** in Mailgun (Receive > Create Route):
+   - Match expression: `match_recipient(".*@inbound.yourdomain.com")`
+   - Action: `forward("https://<your-app>.herokuapp.com/webhooks/mailgun")`
+5. **Get your signing key** from Mailgun dashboard (Settings > API Security > HTTP Webhook Signing Key)
+6. **Set Heroku config vars**:
+   ```bash
+   heroku config:set MAILGUN_SIGNING_KEY=your-signing-key --app your-app
+   heroku config:set MAILGUN_DOMAIN=inbound.yourdomain.com --app your-app  # optional
+   ```
+
+Note: Mailgun expects HTTP 200 for success; 406 rejects the message; other codes trigger retries.
+
 ## Testing
-- Unit tests cover HTML parsing, plus-tag detection, idempotency.
-- Integration tests cover webhook enqueue using FastAPI TestClient and a running Redis.
+- Unit tests cover HTML parsing, plus-tag detection, idempotency, and Mailgun signature verification.
+- Integration tests cover both CloudMailIn and Mailgun webhook endpoints using FastAPI TestClient and a running Redis.
 
 Run (requires Redis):
 ```bash
 pytest -q
 ```
 
-## Webhook Contract
+## Webhook Contracts
+
+### CloudMailIn Endpoint
 - `POST /webhooks/cloudmailin`
   - Headers: `Content-Type: application/json`, optional `X-Webhook-Secret`
   - Body: CloudMailIn JSON (subset used: `headers.message_id`, `envelope.to`, `html`)
   - Response: `202 Accepted` with `{ "status": "enqueued", "message_id": "...", "job_id": "..." }`
+
+### Mailgun Endpoint
+- `POST /webhooks/mailgun`
+  - Headers: `Content-Type: application/x-www-form-urlencoded` or `multipart/form-data`
+  - Body: Form fields including `recipient`, `body-html`, `message-headers`, `timestamp`, `token`, `signature`
+  - Response: `200 OK` with `{ "status": "enqueued", "message_id": "...", "job_id": "..." }`
+  - Security: HMAC-SHA256 signature verification when `MAILGUN_SIGNING_KEY` is set
 
 ## Notes
 - Default open simulation uses direct `img` fetches; enable headless path only if required.

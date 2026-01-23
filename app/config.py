@@ -29,8 +29,13 @@ class Settings:
     # Default to 'none' to support managed instances that present self-signed chains
     redis_ssl_cert_reqs: str = os.getenv("REDIS_SSL_CERT_REQS", "none")
 
+    # CloudMailIn settings
     webhook_secret: Optional[str] = os.getenv("WEBHOOK_SECRET")
     forward_address: str = os.getenv("CLOUDMAILIN_FORWARD_ADDRESS", "")
+
+    # Mailgun settings (for /webhooks/mailgun endpoint)
+    mailgun_signing_key: Optional[str] = os.getenv("MAILGUN_SIGNING_KEY")
+    mailgun_domain: str = os.getenv("MAILGUN_DOMAIN", "")
 
     simulate_with_browser: bool = os.getenv("SIMULATE_WITH_BROWSER", "false").lower() == "true"
     simulate_open_probability: float = float(os.getenv("SIMULATE_OPEN_PROBABILITY", "0.7"))
