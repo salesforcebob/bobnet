@@ -109,6 +109,10 @@ async def mailgun_webhook(
     timestamp: str = Form(default=""),
     token: str = Form(default=""),
     signature: str = Form(default=""),
+    # Additional fields Mailgun may send
+    stripped_text: str | None = Form(default=None, alias="stripped-text"),
+    stripped_html: str | None = Form(default=None, alias="stripped-html"),
+    from_field: str = Form(default="", alias="from"),
 ):
     """
     Webhook endpoint for Mailgun inbound email routing.
@@ -120,6 +124,26 @@ async def mailgun_webhook(
     Security: If MAILGUN_SIGNING_KEY is configured, webhook signatures are
     verified using HMAC-SHA256. If not configured, all requests are accepted.
     """
+    # Log the full incoming payload for debugging
+    logger.info("mailgun_webhook_received", extra={
+        "recipient": recipient,
+        "sender": sender,
+        "from": from_field,
+        "subject": subject,
+        "has_body_html": body_html is not None,
+        "body_html_length": len(body_html) if body_html else 0,
+        "body_html_preview": (body_html[:500] + "...") if body_html and len(body_html) > 500 else body_html,
+        "has_body_plain": body_plain is not None,
+        "body_plain_length": len(body_plain) if body_plain else 0,
+        "has_stripped_html": stripped_html is not None,
+        "stripped_html_length": len(stripped_html) if stripped_html else 0,
+        "has_stripped_text": stripped_text is not None,
+        "has_message_headers": message_headers is not None,
+        "message_headers_preview": (message_headers[:300] + "...") if message_headers and len(message_headers) > 300 else message_headers,
+        "has_signature": bool(signature),
+        "has_timestamp": bool(timestamp),
+    })
+
     # Verify signature if signing key is configured
     if is_signature_verification_enabled(settings.mailgun_signing_key):
         if not verify_mailgun_signature(
@@ -156,14 +180,33 @@ async def mailgun_webhook(
         response.status_code = status.HTTP_200_OK
         return {"status": "duplicate", "message_id": message_id}
 
+    # Build job payload - use body_html, fallback to stripped_html if body_html is empty
+    html_content = body_html
+    html_source = "body-html"
+    if not html_content and stripped_html:
+        html_content = stripped_html
+        html_source = "stripped-html"
+    
+    job_payload = {
+        "message_id": message_id,
+        "to": recipient,
+        "html": html_content,
+    }
+    
+    # Log what we're enqueuing for debugging
+    logger.info("mailgun_job_payload", extra={
+        "message_id": message_id,
+        "to": recipient,
+        "html_source": html_source,
+        "html_length": len(html_content) if html_content else 0,
+        "html_is_none": html_content is None,
+        "html_is_empty_string": html_content == "",
+    })
+
     # Enqueue job with normalized payload (same format as CloudMailIn)
     job = get_queue().enqueue(
         "app.worker.process_mail",
-        {
-            "message_id": message_id,
-            "to": recipient,
-            "html": body_html,
-        },
+        job_payload,
         failure_ttl=86400,  # Auto-delete failed jobs after 24 hours
         result_ttl=300,     # Auto-delete successful job results after 5 minutes
     )
