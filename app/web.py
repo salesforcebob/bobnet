@@ -49,11 +49,16 @@ async def cloudmailin_webhook(mail: IncomingMail, response: Response, x_webhook_
         response.status_code = status.HTTP_202_ACCEPTED
         return {"status": "duplicate", "message_id": message_id}
 
-    job = get_queue().enqueue("app.worker.process_mail", {
-        "message_id": message_id,
-        "to": mail.envelope.to,
-        "html": mail.html,
-    })
+    job = get_queue().enqueue(
+        "app.worker.process_mail",
+        {
+            "message_id": message_id,
+            "to": mail.envelope.to,
+            "html": mail.html,
+        },
+        failure_ttl=86400,  # Auto-delete failed jobs after 24 hours
+        result_ttl=300,     # Auto-delete successful job results after 5 minutes
+    )
 
     logger.info("enqueued_message", extra={"message_id": message_id, "job_id": job.id})
     response.status_code = status.HTTP_202_ACCEPTED
@@ -152,11 +157,16 @@ async def mailgun_webhook(
         return {"status": "duplicate", "message_id": message_id}
 
     # Enqueue job with normalized payload (same format as CloudMailIn)
-    job = get_queue().enqueue("app.worker.process_mail", {
-        "message_id": message_id,
-        "to": recipient,
-        "html": body_html,
-    })
+    job = get_queue().enqueue(
+        "app.worker.process_mail",
+        {
+            "message_id": message_id,
+            "to": recipient,
+            "html": body_html,
+        },
+        failure_ttl=86400,  # Auto-delete failed jobs after 24 hours
+        result_ttl=300,     # Auto-delete successful job results after 5 minutes
+    )
 
     logger.info("enqueued_message", extra={"message_id": message_id, "job_id": job.id, "provider": "mailgun"})
     response.status_code = status.HTTP_200_OK
