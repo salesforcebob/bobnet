@@ -5,8 +5,7 @@ import logging
 from fastapi import FastAPI, Form, HTTPException, Response, status
 from .config import settings
 from .logging import configure_json_logging
-from .queue import get_queue, get_redis
-from .utils.idempotency import mark_if_first
+from .queue import publish_job
 from .utils.mailgun_signature import verify_mailgun_signature, is_signature_verification_enabled
 
 
@@ -73,8 +72,8 @@ async def mailgun_webhook(
     Webhook endpoint for Mailgun inbound email routing.
 
     Mailgun posts form-encoded data (not JSON) when forwarding inbound emails
-    via Routes. This endpoint normalizes the payload to match the internal
-    job format used by the worker.
+    via Routes. This endpoint normalizes the payload and publishes it to
+    RabbitMQ for processing by the worker.
 
     Security: If MAILGUN_SIGNING_KEY is configured, webhook signatures are
     verified using HMAC-SHA256. If not configured, all requests are accepted.
@@ -121,19 +120,11 @@ async def mailgun_webhook(
                 detail="invalid recipient domain",
             )
 
-    # Extract Message-Id from headers for idempotency
+    # Extract Message-Id from headers for job tracking
     message_id = _extract_message_id_from_mailgun_headers(message_headers)
     if not message_id:
-        # Fallback to hash of subject+recipient for idempotency
+        # Fallback to hash of subject+recipient
         message_id = hashlib.sha256(f"{subject}-{recipient}".encode("utf-8")).hexdigest()
-
-    # Use shared idempotency key prefix for consistency
-    idem_key = f"mailgun:msg:{message_id}"
-    first = mark_if_first(get_redis(), idem_key, settings.idempotency_ttl_seconds)
-    if not first:
-        logger.info("duplicate_message_skipped", extra={"message_id": message_id, "provider": "mailgun"})
-        response.status_code = status.HTTP_200_OK
-        return {"status": "duplicate", "message_id": message_id}
 
     # Build job payload - use body_html, fallback to stripped_html if body_html is empty
     html_content = body_html
@@ -148,7 +139,7 @@ async def mailgun_webhook(
         "html": html_content,
     }
     
-    # Log what we're enqueuing for debugging
+    # Log what we're publishing for debugging
     logger.info("mailgun_job_payload", extra={
         "message_id": message_id,
         "to": recipient,
@@ -158,14 +149,9 @@ async def mailgun_webhook(
         "html_is_empty_string": html_content == "",
     })
 
-    # Enqueue job with normalized payload (same format as CloudMailIn)
-    job = get_queue().enqueue(
-        "app.worker.process_mail",
-        job_payload,
-        failure_ttl=86400,  # Auto-delete failed jobs after 24 hours
-        result_ttl=300,     # Auto-delete successful job results after 5 minutes
-    )
+    # Publish job to RabbitMQ
+    publish_job(job_payload)
 
-    logger.info("enqueued_message", extra={"message_id": message_id, "job_id": job.id, "provider": "mailgun"})
+    logger.info("enqueued_message", extra={"message_id": message_id, "provider": "mailgun"})
     response.status_code = status.HTTP_200_OK
-    return {"status": "enqueued", "message_id": message_id, "job_id": job.id}
+    return {"status": "enqueued", "message_id": message_id}

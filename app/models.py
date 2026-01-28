@@ -1,27 +1,5 @@
-from typing import Any, Dict, Optional
+from typing import Optional
 from pydantic import BaseModel, Field
-
-
-# -----------------------------------------------------------------------------
-# CloudMailIn Models (JSON payload)
-# -----------------------------------------------------------------------------
-
-class Envelope(BaseModel):
-    """CloudMailIn envelope containing recipient address."""
-    to: str
-
-
-class IncomingMail(BaseModel):
-    """
-    CloudMailIn inbound email payload (JSON format).
-    
-    CloudMailIn posts JSON with nested envelope and headers objects.
-    Used by the /webhooks/cloudmailin endpoint.
-    """
-    envelope: Envelope
-    headers: Optional[Dict[str, Any]] = None
-    html: Optional[str] = None
-    plain: Optional[str] = None
 
 
 # -----------------------------------------------------------------------------

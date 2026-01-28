@@ -1,12 +1,12 @@
 {
   "name": "BobNet Email Simulator",
-  "description": "Heroku app to simulate email opens/clicks from inbound emails via CloudMailIn or Mailgun (FastAPI + RQ).",
+  "description": "Heroku app to simulate email opens/clicks from inbound emails via Mailgun (FastAPI + RabbitMQ).",
   "repository": "",
-  "keywords": ["fastapi", "heroku", "cloudmailin", "mailgun", "rq", "redis"],
+  "keywords": ["fastapi", "heroku", "mailgun", "rabbitmq", "cloudamqp"],
   "env": {
-    "WEBHOOK_SECRET": {
-      "description": "(optional) Shared secret for CloudMailIn webhook (X-Webhook-Secret header).",
-      "required": false
+    "CLOUDAMQP_URL": {
+      "description": "(required) RabbitMQ connection URL from CloudAMQP. Format: amqps://user:pass@host/vhost",
+      "required": true
     },
     "MAILGUN_SIGNING_KEY": {
       "description": "(optional) Mailgun HTTP webhook signing key for signature verification. Get from Mailgun dashboard > Settings > API Security.",
@@ -32,10 +32,7 @@
     "web": {"quantity": 1, "size": "basic"},
     "worker": {"quantity": 1, "size": "basic"}
   },
-  "addons": [
-    {"plan": "cloudmailin:starter"},
-    {"plan": "heroku-redis:mini"}
-  ],
+  "addons": [],
   "buildpacks": [
     {"url": "heroku/python"}
   ]

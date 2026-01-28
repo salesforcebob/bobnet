@@ -1,46 +1,71 @@
-from redis import Redis
-from rq import Queue
+"""
+RabbitMQ queue module for publishing jobs to CloudAMQP.
+
+This module provides functions to connect to RabbitMQ and publish
+job payloads to the email_simulator queue.
+"""
+from __future__ import annotations
+import json
+import logging
+import pika
 from .config import settings
-import ssl
+
+logger = logging.getLogger(__name__)
+
+QUEUE_NAME = "email_simulator"
 
 
-_redis: Redis | None = None
-_queue: Queue | None = None
-
-
-def get_redis() -> Redis:
+def get_connection() -> pika.BlockingConnection:
     """
-    Create a Redis connection from the configured URL.
+    Create a RabbitMQ connection from CLOUDAMQP_URL.
     
-    Supports both SSL (rediss://) and non-SSL (redis://) URLs.
-    For SSL connections, respects REDIS_SSL_CERT_REQS setting:
-    - 'required': Verify server certificate (default for production)
-    - 'none': Skip certificate verification (for self-signed certs)
+    Returns:
+        A blocking connection to RabbitMQ.
     """
-    global _redis
-    if _redis is None:
-        url = settings.redis_url
+    params = pika.URLParameters(settings.cloudamqp_url)
+    # Set heartbeat and connection timeout for reliability
+    params.heartbeat = 600
+    params.blocked_connection_timeout = 300
+    return pika.BlockingConnection(params)
+
+
+def publish_job(job_payload: dict) -> str:
+    """
+    Publish a job to the email_simulator queue.
+    
+    Args:
+        job_payload: Dictionary containing job data (message_id, to, html).
         
-        # Check if SSL is needed (rediss:// scheme)
-        if url.startswith("rediss://"):
-            cert_mode = (settings.redis_ssl_cert_reqs or "none").lower()
-            
-            # Create SSL context for redis-py 5.x compatibility
-            ssl_context = ssl.create_default_context()
-            if cert_mode != "required":
-                # Skip certificate verification (for self-signed certs)
-                ssl_context.check_hostname = False
-                ssl_context.verify_mode = ssl.CERT_NONE
-            
-            _redis = Redis.from_url(url, ssl=ssl_context)
-        else:
-            # Non-SSL connection
-            _redis = Redis.from_url(url)
-    return _redis
-
-
-def get_queue() -> Queue:
-    global _queue
-    if _queue is None:
-        _queue = Queue("email_simulator", connection=get_redis())
-    return _queue
+    Returns:
+        The message_id from the job payload.
+    """
+    connection = get_connection()
+    try:
+        channel = connection.channel()
+        
+        # Declare queue as durable (survives broker restart)
+        channel.queue_declare(queue=QUEUE_NAME, durable=True)
+        
+        message_id = job_payload.get("message_id", "")
+        body = json.dumps(job_payload)
+        
+        channel.basic_publish(
+            exchange="",
+            routing_key=QUEUE_NAME,
+            body=body,
+            properties=pika.BasicProperties(
+                delivery_mode=2,  # Make message persistent
+                content_type="application/json",
+                message_id=message_id,
+            ),
+        )
+        
+        logger.info("rabbitmq_job_published", extra={
+            "queue": QUEUE_NAME,
+            "message_id": message_id,
+            "body_length": len(body),
+        })
+        
+        return message_id
+    finally:
+        connection.close()

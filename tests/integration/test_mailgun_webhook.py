@@ -4,14 +4,13 @@ Integration tests for the Mailgun webhook endpoint.
 These tests verify that the /webhooks/mailgun endpoint correctly:
 - Accepts form-encoded payloads
 - Verifies signatures when configured
-- Enqueues jobs to Redis
-- Handles duplicate messages via idempotency
+- Publishes jobs to RabbitMQ
 """
 import hashlib
 import hmac
-import os
 import time
 import uuid
+from unittest.mock import patch, MagicMock
 
 import pytest
 from fastapi.testclient import TestClient
@@ -87,8 +86,9 @@ def _create_mailgun_payload(
 class TestMailgunWebhookBasic:
     """Basic functionality tests (without signature verification)."""
 
-    def test_webhook_accepts_valid_payload(self, monkeypatch):
-        """Valid Mailgun payload should be accepted and enqueued."""
+    @patch("app.web.publish_job")
+    def test_webhook_accepts_valid_payload(self, mock_publish, monkeypatch):
+        """Valid Mailgun payload should be accepted and published."""
         # Disable signature verification for this test
         monkeypatch.setenv("MAILGUN_SIGNING_KEY", "")
         monkeypatch.setenv("MAILGUN_DOMAIN", "")
@@ -97,6 +97,8 @@ class TestMailgunWebhookBasic:
         from app.config import Settings
         monkeypatch.setattr("app.web.settings", Settings())
 
+        mock_publish.return_value = "test-message-id"
+        
         client = TestClient(app)
         payload = _create_mailgun_payload()
 
@@ -104,8 +106,15 @@ class TestMailgunWebhookBasic:
 
         assert resp.status_code == 200
         data = resp.json()
-        assert data["status"] in ("enqueued", "duplicate")
+        assert data["status"] == "enqueued"
         assert "message_id" in data
+        
+        # Verify publish_job was called with correct payload structure
+        mock_publish.assert_called_once()
+        job_payload = mock_publish.call_args[0][0]
+        assert "message_id" in job_payload
+        assert "to" in job_payload
+        assert "html" in job_payload
 
     def test_webhook_requires_recipient(self, monkeypatch):
         """Request without recipient should fail with 422."""
@@ -123,33 +132,34 @@ class TestMailgunWebhookBasic:
         resp = client.post("/webhooks/mailgun", data=payload)
         assert resp.status_code == 422  # Validation error
 
-    def test_webhook_handles_duplicate_messages(self, monkeypatch):
-        """Same message_id should be idempotent."""
+    @patch("app.web.publish_job")
+    def test_webhook_extracts_message_id_from_headers(self, mock_publish, monkeypatch):
+        """Message-Id should be extracted from Mailgun headers."""
         monkeypatch.setenv("MAILGUN_SIGNING_KEY", "")
         monkeypatch.setenv("MAILGUN_DOMAIN", "")
         from app.config import Settings
         monkeypatch.setattr("app.web.settings", Settings())
 
+        mock_publish.return_value = "test-message-id"
+        
         client = TestClient(app)
-        message_id = f"<duplicate-test-{uuid.uuid4()}@example.com>"
-        payload = _create_mailgun_payload(message_id=message_id)
+        expected_message_id = "<unique-test-id@example.com>"
+        payload = _create_mailgun_payload(message_id=expected_message_id)
 
-        # First request should enqueue
-        resp1 = client.post("/webhooks/mailgun", data=payload)
-        assert resp1.status_code == 200
-        # Could be "enqueued" or "duplicate" if test ran recently
-        assert resp1.json()["status"] in ("enqueued", "duplicate")
+        resp = client.post("/webhooks/mailgun", data=payload)
 
-        # Second request with same message_id should be duplicate
-        resp2 = client.post("/webhooks/mailgun", data=payload)
-        assert resp2.status_code == 200
-        assert resp2.json()["status"] == "duplicate"
+        assert resp.status_code == 200
+        
+        # Verify the extracted message_id was passed to publish_job
+        job_payload = mock_publish.call_args[0][0]
+        assert job_payload["message_id"] == expected_message_id
 
 
 class TestMailgunWebhookSignatureVerification:
     """Tests for signature verification."""
 
-    def test_valid_signature_accepted(self, monkeypatch):
+    @patch("app.web.publish_job")
+    def test_valid_signature_accepted(self, mock_publish, monkeypatch):
         """Request with valid signature should be accepted."""
         signing_key = "test-signing-key-for-verification"
         monkeypatch.setenv("MAILGUN_SIGNING_KEY", signing_key)
@@ -157,6 +167,8 @@ class TestMailgunWebhookSignatureVerification:
         from app.config import Settings
         monkeypatch.setattr("app.web.settings", Settings())
 
+        mock_publish.return_value = "test-message-id"
+        
         client = TestClient(app)
         payload = _create_mailgun_payload(
             include_signature=True,
@@ -165,7 +177,7 @@ class TestMailgunWebhookSignatureVerification:
 
         resp = client.post("/webhooks/mailgun", data=payload)
         assert resp.status_code == 200
-        assert resp.json()["status"] in ("enqueued", "duplicate")
+        assert resp.json()["status"] == "enqueued"
 
     def test_invalid_signature_rejected(self, monkeypatch):
         """Request with invalid signature should be rejected with 401."""
@@ -204,13 +216,16 @@ class TestMailgunWebhookSignatureVerification:
 class TestMailgunWebhookDomainValidation:
     """Tests for recipient domain validation."""
 
-    def test_valid_domain_accepted(self, monkeypatch):
+    @patch("app.web.publish_job")
+    def test_valid_domain_accepted(self, mock_publish, monkeypatch):
         """Recipient matching configured domain should be accepted."""
         monkeypatch.setenv("MAILGUN_SIGNING_KEY", "")
         monkeypatch.setenv("MAILGUN_DOMAIN", "inbound.example.com")
         from app.config import Settings
         monkeypatch.setattr("app.web.settings", Settings())
 
+        mock_publish.return_value = "test-message-id"
+        
         client = TestClient(app)
         payload = _create_mailgun_payload(recipient="user+tag@inbound.example.com")
 
@@ -231,13 +246,16 @@ class TestMailgunWebhookDomainValidation:
         assert resp.status_code == 400
         assert "invalid recipient domain" in resp.json()["detail"]
 
-    def test_no_domain_validation_when_not_configured(self, monkeypatch):
+    @patch("app.web.publish_job")
+    def test_no_domain_validation_when_not_configured(self, mock_publish, monkeypatch):
         """Any domain should be accepted when MAILGUN_DOMAIN is not set."""
         monkeypatch.setenv("MAILGUN_SIGNING_KEY", "")
         monkeypatch.setenv("MAILGUN_DOMAIN", "")
         from app.config import Settings
         monkeypatch.setattr("app.web.settings", Settings())
 
+        mock_publish.return_value = "test-message-id"
+        
         client = TestClient(app)
         payload = _create_mailgun_payload(recipient="anyone@any-domain.com")
 

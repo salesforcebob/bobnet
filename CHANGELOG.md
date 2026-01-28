@@ -1,24 +1,38 @@
 ## [Unreleased]
+### Changed
+- **Migrated from Redis/RQ to RabbitMQ (CloudAMQP)**
+  - Replaced `redis` and `rq` dependencies with `pika` for RabbitMQ
+  - Rewrote `app/queue.py` as RabbitMQ publisher using pika
+  - Rewrote `app/worker_entry.py` as RabbitMQ consumer with manual acknowledgment
+  - Updated `app/config.py` to use `CLOUDAMQP_URL` instead of Redis settings
+  - Workers now acknowledge messages after successful processing; failed messages are requeued
+  - CloudAMQP provides better queue visibility, management UI, and message inspection
+
+### Removed
+- **CloudMailIn support** - removed `/webhooks/cloudmailin` endpoint
+- **Redis-based idempotency** - removed `app/utils/idempotency.py`
+- Redis and RQ dependencies
+
+---
+
+## [Previous]
 ### Added
-- **Mailgun inbound email support** (backwards-compatible with CloudMailIn)
+- **Mailgun inbound email support**
   - New `/webhooks/mailgun` endpoint for form-encoded Mailgun payloads
   - HMAC-SHA256 signature verification for webhook security
   - Optional domain validation via `MAILGUN_DOMAIN` config
   - Pydantic model for Mailgun payload parsing
   - Unit tests for signature verification
   - Integration tests for Mailgun webhook endpoint
-  - Updated README with dual-provider documentation and Mailgun setup guide
-  - Both CloudMailIn and Mailgun endpoints normalize to the same internal job format
+  - Updated README with Mailgun setup guide
 
-- Initial Python service to simulate CloudMailIn email opens/clicks on Heroku
-  - FastAPI webhook `/webhooks/cloudmailin`
-  - RQ worker for simulation jobs
+- Initial Python service to simulate email opens/clicks on Heroku
+  - FastAPI webhook endpoint
+  - Worker for simulation jobs
   - Direct open via image fetch; randomized clicks
-  - Redis-backed idempotency
   - Heroku `Procfile`, `.python-version`, `app.json` (one-click deploy)
   - README with setup and deploy instructions
   - Initial tests (unit + integration)
 
 ### Changed
 - Replaced deprecated `runtime.txt` with `.python-version` specifying `3.11` to receive latest patch updates automatically.
-- Redis TLS: honor `REDIS_SSL_CERT_REQS` (default `none`) to handle self-signed certificate chains presented by some managed instances.
