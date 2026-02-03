@@ -23,14 +23,12 @@ def _csv(name: str) -> Optional[list[str]]:
 
 
 class Settings:
-    # Prefer REDIS_URL if present; otherwise use REDIS (Heroku Key-Value Store)
-    redis_url: str = os.getenv("REDIS_URL") or os.getenv("REDIS", "redis://localhost:6379/0")
-    # SSL certificate requirement for Redis TLS: 'none' or 'required'
-    # Default to 'none' to support managed instances that present self-signed chains
-    redis_ssl_cert_reqs: str = os.getenv("REDIS_SSL_CERT_REQS", "none")
+    # RabbitMQ connection (CloudAMQP)
+    cloudamqp_url: str = os.getenv("CLOUDAMQP_URL", "amqp://guest:guest@localhost:5672/")
 
-    webhook_secret: Optional[str] = os.getenv("WEBHOOK_SECRET")
-    forward_address: str = os.getenv("CLOUDMAILIN_FORWARD_ADDRESS", "")
+    # Mailgun settings (for /webhooks/mailgun endpoint)
+    mailgun_signing_key: Optional[str] = os.getenv("MAILGUN_SIGNING_KEY")
+    mailgun_domain: str = os.getenv("MAILGUN_DOMAIN", "")
 
     simulate_with_browser: bool = os.getenv("SIMULATE_WITH_BROWSER", "false").lower() == "true"
     simulate_open_probability: float = float(os.getenv("SIMULATE_OPEN_PROBABILITY", "0.7"))
@@ -45,7 +43,6 @@ class Settings:
     deny_domains: Optional[list[str]] = _csv("LINK_DOMAIN_DENYLIST")
 
     request_timeout_ms: int = int(os.getenv("REQUEST_TIMEOUT_MS", "8000"))
-    idempotency_ttl_seconds: int = int(os.getenv("IDEMPOTENCY_TTL_SECONDS", "86400"))
 
 
 settings = Settings()
