@@ -31,7 +31,7 @@ class Settings:
     mailgun_domain: str = os.getenv("MAILGUN_DOMAIN", "")
 
     # Cloudflare settings (for /webhooks/cloudflare endpoint)
-    cloudflare_auth_token: str = os.getenv("CLOUDFLARE_AUTH_TOKEN", "b0b-th3-build3r")
+    cloudflare_auth_token: str = os.getenv("CLOUDFLARE_AUTH_TOKEN")
 
     simulate_with_browser: bool = os.getenv("SIMULATE_WITH_BROWSER", "false").lower() == "true"
     simulate_open_probability: float = float(os.getenv("SIMULATE_OPEN_PROBABILITY", "0.7"))
