@@ -102,10 +102,20 @@ def _extract_html_from_message(msg: Message) -> Optional[str]:
             content_disposition = part.get("Content-Disposition", "")
             transfer_encoding = part.get("Content-Transfer-Encoding", "unknown")
             charset = part.get_content_charset() or "unknown"
+            is_part_multipart = part.is_multipart()
+            
+            # Skip multipart container parts - walk() handles their children
+            if is_part_multipart:
+                logger.info("email_parse_part_skipped_multipart", extra={
+                    "part_index": part_count,
+                    "content_type": part_type,
+                })
+                continue
             
             # Get payload info before decoding
             raw_payload = part.get_payload()
             payload_before_length = len(str(raw_payload)) if raw_payload else 0
+            payload_before_preview = str(raw_payload)[:200] if raw_payload else None
             
             logger.info("email_parse_part_found", extra={
                 "part_index": part_count,
@@ -114,42 +124,68 @@ def _extract_html_from_message(msg: Message) -> Optional[str]:
                 "transfer_encoding": transfer_encoding,
                 "charset": charset,
                 "payload_before_length": payload_before_length,
-                "is_multipart": part.is_multipart(),
+                "payload_before_preview": payload_before_preview,
+                "is_multipart": is_part_multipart,
             })
             
             if part_type == "text/html":
                 payload = part.get_payload(decode=True)
                 payload_after_length = len(payload) if payload else 0
+                payload_after_preview = payload[:200] if payload else None
                 
                 logger.info("email_parse_html_part", extra={
                     "part_index": part_count,
                     "payload_before_length": payload_before_length,
+                    "payload_before_preview": payload_before_preview,
                     "payload_after_length": payload_after_length,
+                    "payload_after_preview": payload_after_preview,
                     "has_payload": payload is not None,
+                    "payload_type": type(payload).__name__ if payload else None,
                 })
                 
                 if payload:
-                    try:
-                        html_content = payload.decode(charset if charset != "unknown" else "utf-8", errors="replace")
-                        html_parts.append(html_content)
-                        logger.info("email_parse_html_part_decoded", extra={
-                            "part_index": part_count,
-                            "html_length": len(html_content),
-                            "html_preview": html_content[:500],
-                        })
-                    except (UnicodeDecodeError, AttributeError) as e:
-                        logger.warning("email_parse_html_part_decode_error", extra={
-                            "part_index": part_count,
-                            "error": str(e),
-                            "error_type": type(e).__name__,
-                        })
-                        html_content = str(payload) if payload else None
-                        if html_content:
+                    # Handle both bytes and string payloads
+                    if isinstance(payload, bytes):
+                        try:
+                            html_content = payload.decode(charset if charset != "unknown" else "utf-8", errors="replace")
                             html_parts.append(html_content)
-                            logger.info("email_parse_html_part_fallback", extra={
+                            logger.info("email_parse_html_part_decoded", extra={
                                 "part_index": part_count,
                                 "html_length": len(html_content),
                                 "html_preview": html_content[:500],
+                            })
+                        except (UnicodeDecodeError, AttributeError) as e:
+                            logger.warning("email_parse_html_part_decode_error", extra={
+                                "part_index": part_count,
+                                "error": str(e),
+                                "error_type": type(e).__name__,
+                            })
+                            # Fallback: try utf-8
+                            try:
+                                html_content = payload.decode("utf-8", errors="replace")
+                                html_parts.append(html_content)
+                                logger.info("email_parse_html_part_utf8_fallback", extra={
+                                    "part_index": part_count,
+                                    "html_length": len(html_content),
+                                    "html_preview": html_content[:500],
+                                })
+                            except Exception:
+                                pass
+                    else:
+                        # Already a string
+                        html_content = str(payload)
+                        if html_content.strip():  # Only add if not whitespace-only
+                            html_parts.append(html_content)
+                            logger.info("email_parse_html_part_string", extra={
+                                "part_index": part_count,
+                                "html_length": len(html_content),
+                                "html_preview": html_content[:500],
+                            })
+                        else:
+                            logger.warning("email_parse_html_part_whitespace", extra={
+                                "part_index": part_count,
+                                "html_length": len(html_content),
+                                "html_content": repr(html_content),
                             })
             
             elif part_type == "text/plain":
