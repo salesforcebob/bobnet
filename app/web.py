@@ -218,14 +218,36 @@ async def cloudflare_webhook(
             "generated_id": message_id,
         })
     
-    # Log parsing results
+    # Log parsing results with detailed HTML analysis
+    html_length = len(html_content) if html_content else 0
+    html_is_whitespace = html_content and html_content.strip() == "" if html_content else False
+    html_preview_length = min(1000, html_length) if html_content else 0
+    
     logger.info("cloudflare_email_parsed", extra={
         "message_id": message_id,
         "message_id_source": "header" if parsed.get("message_id") else "fallback",
         "has_html": html_content is not None,
-        "html_length": len(html_content) if html_content else 0,
-        "html_preview": (html_content[:500] + "...") if html_content and len(html_content) > 500 else html_content,
+        "html_length": html_length,
+        "html_is_whitespace": html_is_whitespace,
+        "html_preview": html_content[:html_preview_length] if html_content else None,
+        "html_preview_length": html_preview_length,
+        "parsed_subject": parsed_subject,
+        "payload_subject": payload.subject,
     })
+    
+    # Warn if HTML is suspiciously short or whitespace-only
+    if html_content:
+        if html_is_whitespace:
+            logger.warning("cloudflare_html_whitespace_only", extra={
+                "message_id": message_id,
+                "html_length": html_length,
+            })
+        elif html_length < 10:
+            logger.warning("cloudflare_html_very_short", extra={
+                "message_id": message_id,
+                "html_length": html_length,
+                "html_content": html_content,
+            })
     
     # Build job payload
     job_payload = {
@@ -238,9 +260,11 @@ async def cloudflare_webhook(
     logger.info("cloudflare_job_payload", extra={
         "message_id": message_id,
         "to": payload.to,
-        "html_length": len(html_content) if html_content else 0,
+        "html_length": html_length,
         "html_is_none": html_content is None,
         "html_is_empty_string": html_content == "",
+        "html_is_whitespace": html_is_whitespace,
+        "html_preview": html_content[:500] if html_content else None,
     })
     
     # Publish job to RabbitMQ
