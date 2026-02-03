@@ -1,4 +1,13 @@
 ## [Unreleased]
+### Added
+- **Cloudflare inbound email support**
+  - New `/webhooks/cloudflare` endpoint for JSON payloads from Cloudflare Workers
+  - Raw email parsing utility (`app/utils/email_parse.py`) to extract HTML and Message-Id from RFC 5322 emails
+  - Custom auth header verification via `X-Custom-Auth` header (configurable via `CLOUDFLARE_AUTH_TOKEN`)
+  - Pydantic model (`CloudflareInbound`) for Cloudflare payload parsing
+  - Integration tests for Cloudflare webhook endpoint
+  - Updated README with Cloudflare setup guide and webhook contract
+
 ### Changed
 - **Migrated from Redis/RQ to RabbitMQ (CloudAMQP)**
   - Replaced `redis` and `rq` dependencies with `pika` for RabbitMQ

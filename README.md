@@ -7,12 +7,13 @@ Simulates customer behavior (opens and clicks) on inbound marketing emails. Runs
 Just name it. Defaults are good.
 
 ## Features
-- Inbound email processing via **Mailgun** (unlimited inbound on Foundation plan)
+- Inbound email processing via **Mailgun** (unlimited inbound on Foundation plan) or **Cloudflare** (via Workers)
 - Randomized open simulation via direct pixel fetch (default)
 - Randomized click simulation with domain allow/deny filters
 - Message queue via **RabbitMQ** (CloudAMQP)
 - Structured JSON logging
 - HMAC signature verification for Mailgun webhooks
+- Custom auth header verification for Cloudflare webhooks
 
 ## Quick Start
 
@@ -41,6 +42,7 @@ app/
     openers.py           # Open simulation (direct)
     clickers.py          # Click selection + execution
   utils/
+    email_parse.py       # Raw email parsing (for Cloudflare)
     mailgun_signature.py # Mailgun HMAC signature verification
     user_agents.py       # UA rotation
 ```
@@ -55,6 +57,10 @@ app/
 
 - `MAILGUN_SIGNING_KEY` (recommended): HTTP webhook signing key from Mailgun dashboard (Settings > API Security)
 - `MAILGUN_DOMAIN` (optional): Restrict accepted recipients to this domain (e.g., `inbound.example.com`)
+
+### Cloudflare Settings
+
+- `CLOUDFLARE_AUTH_TOKEN` (optional): Custom auth token for Cloudflare webhook (defaults to `b0b-th3-build3r`)
 
 ### Simulation Settings
 
@@ -75,8 +81,9 @@ app/
 5. Run web: `uvicorn app.web:app --reload --port 8000`
 6. Run worker: `python -m app.worker_entry`
 
-Webhook endpoint:
+Webhook endpoints:
 - Mailgun: `POST http://localhost:8000/webhooks/mailgun` (form-encoded)
+- Cloudflare: `POST http://localhost:8000/webhooks/cloudflare` (JSON)
 
 ## Heroku Deployment
 
@@ -129,10 +136,49 @@ Mailgun offers unlimited inbound emails on the Foundation plan ($35/month).
 
 Note: Mailgun expects HTTP 200 for success; 406 rejects the message; other codes trigger retries.
 
+### Cloudflare Setup
+
+Cloudflare Email Workers allow you to receive inbound emails via Cloudflare's infrastructure.
+
+1. **Set up Cloudflare Email Routing**:
+   - Configure your domain's MX records to point to Cloudflare
+   - Enable Email Routing in your Cloudflare dashboard
+2. **Create a Cloudflare Worker** to forward emails to your Heroku app:
+   ```javascript
+   export default {
+     async email(message, env, ctx) {
+       const WEBHOOK_URL = "https://<your-app>.herokuapp.com/webhooks/cloudflare";
+       
+       const payload = {
+         from: message.from,
+         to: message.to,
+         subject: message.headers.get("subject"),
+         timestamp: new Date().toISOString(),
+         raw_content: await new Response(message.raw).text()
+       };
+       
+       await fetch(WEBHOOK_URL, {
+         method: "POST",
+         headers: {
+           "Content-Type": "application/json",
+           "X-Custom-Auth": "b0b-th3-build3r"  // Or your custom token
+         },
+         body: JSON.stringify(payload),
+       });
+     }
+   }
+   ```
+3. **Set Heroku config var** (optional, if using custom token):
+   ```bash
+   heroku config:set CLOUDFLARE_AUTH_TOKEN=your-custom-token --app your-app
+   ```
+
+The Cloudflare webhook endpoint parses raw RFC 5322 email content to extract HTML body and Message-Id headers before publishing to RabbitMQ.
+
 ## Testing
 
 - Unit tests cover HTML parsing, plus-tag detection, and Mailgun signature verification.
-- Integration tests cover the Mailgun webhook endpoint using FastAPI TestClient with mocked RabbitMQ.
+- Integration tests cover both Mailgun and Cloudflare webhook endpoints using FastAPI TestClient with mocked RabbitMQ.
 
 Run:
 ```bash
@@ -147,6 +193,13 @@ pytest -q
   - Body: Form fields including `recipient`, `body-html`, `message-headers`, `timestamp`, `token`, `signature`
   - Response: `200 OK` with `{ "status": "enqueued", "message_id": "..." }`
   - Security: HMAC-SHA256 signature verification when `MAILGUN_SIGNING_KEY` is set
+
+### Cloudflare Endpoint
+- `POST /webhooks/cloudflare`
+  - Headers: `Content-Type: application/json`, `X-Custom-Auth: <token>`
+  - Body: JSON payload with `from`, `to`, `subject`, `timestamp`, `raw_content` (full RFC 5322 email)
+  - Response: `200 OK` with `{ "status": "enqueued", "message_id": "..." }`
+  - Security: Custom auth header verification (defaults to `b0b-th3-build3r`, configurable via `CLOUDFLARE_AUTH_TOKEN`)
 
 ## Notes
 - Default open simulation uses direct `img` fetches; enable headless path only if required.
