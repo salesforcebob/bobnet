@@ -16,7 +16,10 @@ fn extract_domain(url: &str) -> String {
         .to_lowercase()
 }
 
-/// Filter links by domain allow/deny lists.
+/// Filter links by domain allow/deny lists and unsubscribe links.
+///
+/// Unsubscribe links matching `cl.S4.exct.net/unsub_center.aspx` are filtered out
+/// unless they have a `data-click-rate` override (click_rate is Some).
 pub fn filter_links_with_rates(
     links: &[LinkWithRate],
     allow: Option<&[String]>,
@@ -25,6 +28,26 @@ pub fn filter_links_with_rates(
     links
         .iter()
         .filter(|link| {
+            let url_lower = link.url.to_lowercase();
+            
+            // Filter out ExactTarget unsubscribe links unless they have a click-rate override
+            if url_lower.contains("cl.s4.exct.net/unsub_center.aspx") {
+                // Only allow if there's an explicit data-click-rate override
+                if link.click_rate.is_none() {
+                    tracing::debug!(
+                        url = %link.url,
+                        "filtered_unsubscribe_link_no_override"
+                    );
+                    return false;
+                }
+                // If it has an override, log and allow it
+                tracing::debug!(
+                    url = %link.url,
+                    click_rate = link.click_rate,
+                    "allowing_unsubscribe_link_with_override"
+                );
+            }
+
             let host = extract_domain(&link.url);
 
             // Check deny list first
@@ -217,6 +240,35 @@ mod tests {
         
         assert_eq!(filtered.len(), 1);
         assert!(filtered[0].url.contains("allowed.com"));
+    }
+
+    #[test]
+    fn test_filter_unsubscribe_link_no_override() {
+        let links = vec![
+            LinkWithRate::new("https://example.com/page".to_string(), None),
+            LinkWithRate::new("https://cl.S4.exct.net/unsub_center.aspx?email=test@example.com".to_string(), None),
+            LinkWithRate::new("https://CL.S4.EXCT.NET/unsub_center.aspx".to_string(), None),
+        ];
+
+        let filtered = filter_links_with_rates(&links, None, None);
+        
+        // Should filter out unsubscribe links without override
+        assert_eq!(filtered.len(), 1);
+        assert!(filtered[0].url.contains("example.com"));
+    }
+
+    #[test]
+    fn test_filter_unsubscribe_link_with_override() {
+        let links = vec![
+            LinkWithRate::new("https://example.com/page".to_string(), None),
+            LinkWithRate::new("https://cl.S4.exct.net/unsub_center.aspx?email=test@example.com".to_string(), Some(0.5)),
+        ];
+
+        let filtered = filter_links_with_rates(&links, None, None);
+        
+        // Should keep unsubscribe link with override
+        assert_eq!(filtered.len(), 2);
+        assert!(filtered.iter().any(|l| l.url.contains("unsub_center")));
     }
 
     #[test]

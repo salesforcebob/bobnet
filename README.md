@@ -158,6 +158,25 @@ You can also set individual click rates on specific links using the `data-click-
 2. **Combined Attributes:** Both `data-open-rate` and `data-click-rate` can be in the same `<div data-scope="global">` element - this is the recommended approach
 3. **Multiple Global Divs:** If multiple `<div data-scope="global">` elements are found, both functions will use the first div that contains their respective attribute (a warning is logged if multiple divs exist)
 
+#### Unsubscribe Link Filtering
+
+**ExactTarget unsubscribe links are automatically excluded from click simulation** unless they have an explicit `data-click-rate` override.
+
+Unsubscribe links matching the pattern `https://cl.S4.exct.net/unsub_center.aspx` (case-insensitive) will be filtered out during link selection to prevent accidental unsubscribes.
+
+**To allow clicking an unsubscribe link**, add a `data-click-rate` attribute:
+
+```html
+<a href="https://cl.S4.exct.net/unsub_center.aspx?email=test@example.com" data-click-rate="0.1">
+  Unsubscribe
+</a>
+```
+
+**Behavior:**
+- Unsubscribe links **without** `data-click-rate` are **never clicked** (filtered out)
+- Unsubscribe links **with** `data-click-rate` are **eligible for clicking** based on their rate
+- This protection applies regardless of global click rate settings or domain allow/deny lists
+
 ## Local Development
 
 ### Quick Start (Rust)
