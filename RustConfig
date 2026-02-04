@@ -6,3 +6,6 @@ VERSION=stable
 
 # Path to the Cargo.toml (relative to repo root)
 BUILD_PATH=rust-worker
+
+# Build all binaries (web, processor, worker)
+RUST_CARGO_BUILD_FLAGS="--release --bins"
