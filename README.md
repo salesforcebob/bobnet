@@ -50,6 +50,15 @@ app/
     email_parse.py       # Raw email parsing (for Cloudflare)
     mailgun_signature.py # Mailgun HMAC signature verification
     user_agents.py       # UA rotation
+rust-worker/             # High-performance Rust worker (optional)
+  src/
+    main.rs              # Entry point
+    config.rs            # Env configuration
+    consumer.rs          # RabbitMQ consumer (lapin)
+    processor.rs         # Job processing logic
+    html/                # HTML parsing (scraper)
+    simulate/            # Open/click simulation (reqwest)
+    util/                # User agent rotation
 ```
 
 ## Configuration
@@ -76,6 +85,57 @@ app/
 - `OPEN_DELAY_RANGE_MS` (default `500,5000`)
 - `CLICK_DELAY_RANGE_MS` (default `300,4000`)
 - `REQUEST_TIMEOUT_MS` (default `8000`)
+
+### HTML-Based Overrides
+
+You can override simulation probabilities on a per-email basis by including special HTML attributes in your email content. These overrides take precedence over environment variable settings.
+
+#### Global Overrides (Single Div - Recommended)
+
+You can combine both open and click rate overrides in a single `<div>` with `data-scope="global"`:
+
+```html
+<div data-scope="global" data-open-rate="0.9" data-click-rate="0.5">
+</div>
+```
+
+**Example:** This sets 90% open rate and 50% click rate for the entire email, overriding the `SIMULATE_OPEN_PROBABILITY` and `SIMULATE_CLICK_PROBABILITY` environment variables.
+
+#### Separate Overrides (Optional)
+
+If you prefer, you can also use separate divs for each override:
+
+```html
+<!-- Open rate override -->
+<div data-scope="global" data-open-rate="0.9">
+</div>
+
+<!-- Click rate override -->
+<div data-scope="global" data-click-rate="0.5">
+</div>
+```
+
+**Note:** If multiple `<div data-scope="global">` elements exist, both functions will use the first one that contains their respective attribute. Using a single combined div is recommended for clarity.
+
+#### Per-Link Click Rate Override
+
+You can also set individual click rates on specific links using the `data-click-rate` attribute:
+
+```html
+<a href="https://example.com/important" data-click-rate="0.8">Important Link</a>
+<a href="https://example.com/regular" data-click-rate="0.2">Regular Link</a>
+```
+
+**Behavior:**
+- Links with `data-click-rate` use their individual rate
+- Links without `data-click-rate` use the global click rate (from `data-scope="global"` or `SIMULATE_CLICK_PROBABILITY`)
+- Link selection uses weighted random selection based on these rates
+
+#### Override Rules
+
+1. **Value Range:** All rate values are clamped to `0.0` - `1.0` (values below 0 become 0.0, values above 1.0 become 1.0)
+2. **Combined Attributes:** Both `data-open-rate` and `data-click-rate` can be in the same `<div data-scope="global">` element - this is the recommended approach
+3. **Multiple Global Divs:** If multiple `<div data-scope="global">` elements are found, both functions will use the first div that contains their respective attribute (a warning is logged if multiple divs exist)
 
 ## Local Development
 
@@ -224,6 +284,72 @@ pytest -q
   - Body: Form fields including `recipient`, `body-html`, `message-headers`, `timestamp`, `token`, `signature`
   - Response: `200 OK` with `{ "status": "enqueued", "message_id": "..." }`
   - Security: HMAC-SHA256 signature verification when `MAILGUN_SIGNING_KEY` is set
+
+## High-Performance Rust Worker (Optional)
+
+For significantly higher throughput, you can use the Rust-based worker instead of the Python worker. The Rust worker uses Tokio for async processing and can handle hundreds of concurrent messages.
+
+### Performance Comparison
+
+| Worker | Throughput | Latency | Concurrency |
+|--------|------------|---------|-------------|
+| Python | ~0.11 items/sec | 9+ seconds/item | 1 (sequential) |
+| Rust | 50-100+ items/sec | Sub-second/item | 100+ (concurrent) |
+
+### Building the Rust Worker
+
+```bash
+# Install Rust (if not already installed)
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+
+# Build the release binary
+cd rust-worker
+cargo build --release
+```
+
+The binary will be at `./target/release/bobnet-worker`.
+
+### Running Locally
+
+```bash
+# Set environment variables (same as Python worker)
+export CLOUDAMQP_URL=amqp://guest:guest@localhost:5672/
+
+# Run the Rust worker
+./target/release/bobnet-worker
+```
+
+### Rust Worker Configuration
+
+The Rust worker uses the same environment variables as the Python worker, plus:
+
+- `WORKER_CONCURRENCY` (default `100`): Maximum number of concurrent job processors
+
+### Heroku Deployment with Rust
+
+To deploy the Rust worker on Heroku:
+
+1. Add the Rust buildpack:
+   ```bash
+   heroku buildpacks:add emk/rust --app your-app
+   ```
+
+2. Scale the `rust-worker` dyno:
+   ```bash
+   heroku ps:scale rust-worker=1 worker=0 --app your-app
+   ```
+
+The `Procfile` includes both worker types:
+- `worker`: Python worker (sequential processing)
+- `rust-worker`: Rust worker (concurrent processing)
+
+### Rust Worker Features
+
+- **Async/concurrent processing**: Uses Tokio runtime for non-blocking I/O
+- **High prefetch**: Fetches up to 100 messages at a time from RabbitMQ
+- **Connection pooling**: Reuses HTTP connections for efficiency
+- **Graceful shutdown**: Handles SIGINT/SIGTERM for clean exits
+- **Identical behavior**: Same simulation logic as Python worker
 
 ## Notes
 - Default open simulation uses direct `img` fetches; enable headless path only if required.

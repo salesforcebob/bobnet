@@ -12,6 +12,7 @@ from .simulate.html_parse import (
     extract_links_with_rates,
     find_exacttarget_open_pixel,
     find_global_click_rate,
+    find_global_open_rate,
 )
 from .simulate.openers import simulate_open_via_direct, fetch_single_url
 from .simulate.clickers import (
@@ -101,17 +102,33 @@ def process_mail(job: Dict[str, Any]) -> Dict[str, Any]:
     logger.info("worker_delay_start", extra={"message_id": message_id, "delay_ms": delay_ms})
     time.sleep(delay_ms / 1000)
 
+    # Check for global open rate override in HTML
+    global_open_rate = find_global_open_rate(html)
+    effective_open_probability = (
+        global_open_rate 
+        if global_open_rate is not None 
+        else settings.simulate_open_probability
+    )
+    
+    logger.info("worker_open_rate_determined", extra={
+        "message_id": message_id,
+        "global_override_found": global_open_rate is not None,
+        "global_override_value": global_open_rate,
+        "default_probability": settings.simulate_open_probability,
+        "effective_probability": effective_open_probability,
+    })
+
     opened = False
     open_roll = random.random()
-    will_attempt_open = open_roll < settings.simulate_open_probability
+    will_attempt_open = open_roll < effective_open_probability
     
     logger.info("worker_open_roll", extra={
         "message_id": message_id,
         "roll": open_roll,
-        "threshold": settings.simulate_open_probability,
-        "threshold_type": type(settings.simulate_open_probability).__name__,
+        "threshold": effective_open_probability,
+        "threshold_type": type(effective_open_probability).__name__,
         "will_attempt_open": will_attempt_open,
-        "comparison": f"{open_roll} < {settings.simulate_open_probability} = {will_attempt_open}",
+        "comparison": f"{open_roll} < {effective_open_probability} = {will_attempt_open}",
     })
     
     if will_attempt_open:

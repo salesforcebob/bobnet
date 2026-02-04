@@ -100,6 +100,77 @@ def find_exacttarget_open_pixel(html: str) -> Optional[str]:
     return None
 
 
+def find_global_open_rate(html: str) -> Optional[float]:
+    """Find global open rate override from HTML.
+    
+    Searches for <div data-scope="global" data-open-rate="..."> and returns
+    the parsed float value (0.0-1.0). Returns None if not found.
+    
+    Args:
+        html: HTML content to parse
+        
+    Returns:
+        Float value between 0.0 and 1.0, or None if not found
+    """
+    soup = BeautifulSoup(html or "", "html.parser")
+    global_divs = soup.find_all("div", attrs={"data-scope": "global"})
+    
+    logger.info("global_open_rate_search_start", extra={
+        "total_divs_with_scope_global": len(global_divs),
+        "html_length": len(html) if html else 0,
+    })
+    
+    for idx, div in enumerate(global_divs):
+        open_rate_attr = div.get("data-open-rate")
+        if open_rate_attr is None:
+            logger.debug("global_open_rate_div_no_attribute", extra={
+                "div_index": idx,
+            })
+            continue
+        
+        try:
+            rate = float(open_rate_attr)
+            # Clamp to valid range [0.0, 1.0]
+            if rate < 0.0:
+                logger.warning("global_open_rate_below_zero", extra={
+                    "div_index": idx,
+                    "value": rate,
+                    "clamped_to": 0.0,
+                })
+                rate = 0.0
+            elif rate > 1.0:
+                logger.warning("global_open_rate_above_one", extra={
+                    "div_index": idx,
+                    "value": rate,
+                    "clamped_to": 1.0,
+                })
+                rate = 1.0
+            
+            if idx > 0:
+                logger.warning("global_open_rate_multiple_divs", extra={
+                    "using_first": True,
+                    "total_found": len(global_divs),
+                })
+            
+            logger.info("global_open_rate_found", extra={
+                "div_index": idx,
+                "value": rate,
+                "raw_attribute": open_rate_attr,
+            })
+            return rate
+        except (ValueError, TypeError) as e:
+            logger.warning("global_open_rate_invalid_value", extra={
+                "div_index": idx,
+                "raw_attribute": open_rate_attr,
+                "error": str(e),
+            })
+    
+    logger.info("global_open_rate_not_found", extra={
+        "total_divs_checked": len(global_divs),
+    })
+    return None
+
+
 def find_global_click_rate(html: str) -> Optional[float]:
     """Find global click rate override from HTML.
     
