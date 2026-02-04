@@ -44,12 +44,46 @@ def find_exacttarget_open_pixel(html: str) -> Optional[str]:
     Specifically searches for an <img> whose src contains
     '://cl.s4.exct.net/open.aspx' (case-insensitive).
     """
+    import logging
+    logger = logging.getLogger(__name__)
+    
     soup = BeautifulSoup(html or "", "html.parser")
-    for img in soup.find_all("img"):
+    all_imgs = soup.find_all("img")
+    
+    logger.info("open_pixel_search_start", extra={
+        "total_img_tags": len(all_imgs),
+        "html_length": len(html) if html else 0,
+    })
+    
+    for idx, img in enumerate(all_imgs):
         src = img.get("src")
         if not src:
+            logger.debug("open_pixel_img_no_src", extra={
+                "img_index": idx,
+            })
             continue
+        
         low = src.lower()
-        if "://cl.s4.exct.net/open.aspx" in low:
+        matches_pattern = "://cl.s4.exct.net/open.aspx" in low
+        
+        logger.info("open_pixel_checking_img", extra={
+            "img_index": idx,
+            "src": src,
+            "src_length": len(src),
+            "src_lowercase": low,
+            "matches_pattern": matches_pattern,
+            "pattern": "://cl.s4.exct.net/open.aspx",
+        })
+        
+        if matches_pattern:
+            logger.info("open_pixel_found", extra={
+                "img_index": idx,
+                "url": src,
+            })
             return src
+    
+    logger.info("open_pixel_not_found", extra={
+        "total_imgs_checked": len(all_imgs),
+        "all_img_srcs": [img.get("src", "")[:100] for img in all_imgs if img.get("src")],
+    })
     return None
