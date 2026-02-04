@@ -7,25 +7,30 @@ Simulates customer behavior (opens and clicks) on inbound marketing emails. Runs
 Just name it. Defaults are good.
 
 ## Features
-- Inbound email processing via **Mailgun** (unlimited inbound on Foundation plan) or **Cloudflare** (via Workers)
+- **Cost-efficient inbound email processing via Cloudflare** (free tier available, Workers-based)
 - Randomized open simulation via direct pixel fetch (default)
+  - Prioritizes ExactTarget/Salesforce Marketing Cloud open pixels (`cl.s4.exct.net/open.aspx`)
+  - Falls back to fetching other image resources in the email
 - Randomized click simulation with domain allow/deny filters
 - Message queue via **RabbitMQ** (CloudAMQP)
-- Structured JSON logging
-- HMAC signature verification for Mailgun webhooks
+- Structured JSON logging with detailed open/click tracking
 - Custom auth header verification for Cloudflare webhooks
+- **Alternative**: Mailgun support (paid plan required)
 
-## Quick Start
+## Quick Start (Cloudflare - Recommended)
 
-1. Sign up for Mailgun Foundation plan ($35/month, unlimited inbound emails)
-2. Add your domain and configure MX records (see [Mailgun Setup](#mailgun-setup) below)
-3. Create an inbound route pointing to `https://<your-app>.herokuapp.com/webhooks/mailgun`
-4. Set up CloudAMQP (see [CloudAMQP Setup](#cloudamqp-setup) below)
-5. Set environment variables in Heroku config vars
+1. Set up Cloudflare Email Routing (see [Cloudflare Setup](#cloudflare-setup) below)
+2. Create a Cloudflare Worker to forward emails to your Heroku app
+3. Set up CloudAMQP (see [CloudAMQP Setup](#cloudamqp-setup) below)
+4. Deploy to Heroku and set environment variables
+5. Configure your Cloudflare Worker with your Heroku app URL
+
+**Why Cloudflare?** Free tier available, no per-email costs, scalable infrastructure, and simple setup.
 
 ## Provider References
-- **Mailgun**: [Inbound Email Routing](https://documentation.mailgun.com/docs/mailgun/user-manual/receive-forward-store/routes)
+- **Cloudflare**: [Email Routing](https://developers.cloudflare.com/email-routing/)
 - **CloudAMQP**: [Getting Started](https://www.cloudamqp.com/docs/index.html)
+- **Mailgun** (alternative): [Inbound Email Routing](https://documentation.mailgun.com/docs/mailgun/user-manual/receive-forward-store/routes)
 
 ## Project Layout
 ```
@@ -53,14 +58,14 @@ app/
 
 - `CLOUDAMQP_URL`: RabbitMQ connection URL from CloudAMQP (format: `amqps://user:pass@host/vhost`)
 
-### Mailgun Settings
+### Cloudflare Settings (Primary)
+
+- `CLOUDFLARE_AUTH_TOKEN` (recommended): Custom auth token for Cloudflare webhook. The `X-Custom-Auth` header in the webhook request must match this value. If not set, requests without the header will be accepted (not recommended for production).
+
+### Mailgun Settings (Alternative)
 
 - `MAILGUN_SIGNING_KEY` (recommended): HTTP webhook signing key from Mailgun dashboard (Settings > API Security)
 - `MAILGUN_DOMAIN` (optional): Restrict accepted recipients to this domain (e.g., `inbound.example.com`)
-
-### Cloudflare Settings
-
-- `CLOUDFLARE_AUTH_TOKEN` (optional): Custom auth token for Cloudflare webhook (defaults to `b0b-th3-build3r`)
 
 ### Simulation Settings
 
@@ -82,8 +87,8 @@ app/
 6. Run worker: `python -m app.worker_entry`
 
 Webhook endpoints:
-- Mailgun: `POST http://localhost:8000/webhooks/mailgun` (form-encoded)
-- Cloudflare: `POST http://localhost:8000/webhooks/cloudflare` (JSON)
+- Cloudflare: `POST http://localhost:8000/webhooks/cloudflare` (JSON) - **Recommended**
+- Mailgun: `POST http://localhost:8000/webhooks/mailgun` (form-encoded) - Alternative
 
 ## Heroku Deployment
 
@@ -95,6 +100,64 @@ This repo includes:
 Using the one-click button opens Heroku's deploy UI pre-configured with:
 - Buildpack: heroku/python
 - Formation: 1× web, 1× worker
+
+### Cloudflare Setup (Recommended - Cost-Efficient)
+
+Cloudflare Email Workers provide a cost-effective way to receive inbound emails with no per-email charges on the free tier.
+
+1. **Set up Cloudflare Email Routing**:
+   - Sign up for a free Cloudflare account at [cloudflare.com](https://www.cloudflare.com)
+   - Add your domain to Cloudflare
+   - Navigate to Email > Email Routing in your Cloudflare dashboard
+   - Configure your domain's MX records (Cloudflare provides the values)
+   - Enable Email Routing
+
+2. **Create a Cloudflare Worker** to forward emails to your Heroku app:
+   - Go to Workers & Pages in your Cloudflare dashboard
+   - Create a new Worker
+   - Use the following code:
+   ```javascript
+   export default {
+     async email(message, env, ctx) {
+       const WEBHOOK_URL = "https://<your-app>.herokuapp.com/webhooks/cloudflare";
+       const AUTH_TOKEN = "your-secure-token-here";  // Use a strong random token
+       
+       const payload = {
+         from: message.from,
+         to: message.to,
+         subject: message.headers.get("subject"),
+         timestamp: new Date().toISOString(),
+         raw_content: await new Response(message.raw).text()
+       };
+       
+       await fetch(WEBHOOK_URL, {
+         method: "POST",
+         headers: {
+           "Content-Type": "application/json",
+           "X-Custom-Auth": AUTH_TOKEN
+         },
+         body: JSON.stringify(payload),
+       });
+     }
+   }
+   ```
+   - Deploy the Worker
+   - Configure Email Routing to send emails to this Worker
+
+3. **Set Heroku config vars**:
+   ```bash
+   heroku config:set CLOUDFLARE_AUTH_TOKEN=your-secure-token-here --app your-app
+   heroku config:set CLOUDAMQP_URL=amqps://user:pass@host/vhost --app your-app
+   ```
+
+**Benefits of Cloudflare:**
+- ✅ Free tier available (100,000 requests/day)
+- ✅ No per-email costs
+- ✅ Scalable infrastructure
+- ✅ Simple setup with Email Routing
+- ✅ Fast and reliable
+
+The Cloudflare webhook endpoint parses raw RFC 5322 email content to extract HTML body and Message-Id headers before publishing to RabbitMQ.
 
 ### CloudAMQP Setup
 
@@ -113,9 +176,9 @@ CloudAMQP provides:
 - Consumer metrics and monitoring
 - Dead letter queues for failed messages
 
-### Mailgun Setup
+### Mailgun Setup (Alternative - Paid)
 
-Mailgun offers unlimited inbound emails on the Foundation plan ($35/month).
+Mailgun offers unlimited inbound emails on the Foundation plan ($35/month). Use this option if you prefer Mailgun's infrastructure or need features not available in Cloudflare.
 
 1. **Sign up** at [mailgun.com](https://www.mailgun.com) for the Foundation plan
 2. **Add your domain** (e.g., `inbound.yourdomain.com`) in the Mailgun dashboard
@@ -136,49 +199,10 @@ Mailgun offers unlimited inbound emails on the Foundation plan ($35/month).
 
 Note: Mailgun expects HTTP 200 for success; 406 rejects the message; other codes trigger retries.
 
-### Cloudflare Setup
-
-Cloudflare Email Workers allow you to receive inbound emails via Cloudflare's infrastructure.
-
-1. **Set up Cloudflare Email Routing**:
-   - Configure your domain's MX records to point to Cloudflare
-   - Enable Email Routing in your Cloudflare dashboard
-2. **Create a Cloudflare Worker** to forward emails to your Heroku app:
-   ```javascript
-   export default {
-     async email(message, env, ctx) {
-       const WEBHOOK_URL = "https://<your-app>.herokuapp.com/webhooks/cloudflare";
-       
-       const payload = {
-         from: message.from,
-         to: message.to,
-         subject: message.headers.get("subject"),
-         timestamp: new Date().toISOString(),
-         raw_content: await new Response(message.raw).text()
-       };
-       
-       await fetch(WEBHOOK_URL, {
-         method: "POST",
-         headers: {
-           "Content-Type": "application/json",
-           "X-Custom-Auth": "b0b-th3-build3r"  // Or your custom token
-         },
-         body: JSON.stringify(payload),
-       });
-     }
-   }
-   ```
-3. **Set Heroku config var** (optional, if using custom token):
-   ```bash
-   heroku config:set CLOUDFLARE_AUTH_TOKEN=your-custom-token --app your-app
-   ```
-
-The Cloudflare webhook endpoint parses raw RFC 5322 email content to extract HTML body and Message-Id headers before publishing to RabbitMQ.
-
 ## Testing
 
 - Unit tests cover HTML parsing, plus-tag detection, and Mailgun signature verification.
-- Integration tests cover both Mailgun and Cloudflare webhook endpoints using FastAPI TestClient with mocked RabbitMQ.
+- Integration tests cover both Cloudflare and Mailgun webhook endpoints using FastAPI TestClient with mocked RabbitMQ.
 
 Run:
 ```bash
@@ -187,23 +211,25 @@ pytest -q
 
 ## Webhook Contract
 
-### Mailgun Endpoint
+### Cloudflare Endpoint (Primary)
+- `POST /webhooks/cloudflare`
+  - Headers: `Content-Type: application/json`, `X-Custom-Auth: <token>` (required if `CLOUDFLARE_AUTH_TOKEN` is set)
+  - Body: JSON payload with `from`, `to`, `subject`, `timestamp`, `raw_content` (full RFC 5322 email)
+  - Response: `200 OK` with `{ "status": "enqueued", "message_id": "..." }`
+  - Security: Custom auth header verification (configurable via `CLOUDFLARE_AUTH_TOKEN`). If not set, requests without the header are accepted.
+
+### Mailgun Endpoint (Alternative)
 - `POST /webhooks/mailgun`
   - Headers: `Content-Type: application/x-www-form-urlencoded` or `multipart/form-data`
   - Body: Form fields including `recipient`, `body-html`, `message-headers`, `timestamp`, `token`, `signature`
   - Response: `200 OK` with `{ "status": "enqueued", "message_id": "..." }`
   - Security: HMAC-SHA256 signature verification when `MAILGUN_SIGNING_KEY` is set
 
-### Cloudflare Endpoint
-- `POST /webhooks/cloudflare`
-  - Headers: `Content-Type: application/json`, `X-Custom-Auth: <token>`
-  - Body: JSON payload with `from`, `to`, `subject`, `timestamp`, `raw_content` (full RFC 5322 email)
-  - Response: `200 OK` with `{ "status": "enqueued", "message_id": "..." }`
-  - Security: Custom auth header verification (defaults to `b0b-th3-build3r`, configurable via `CLOUDFLARE_AUTH_TOKEN`)
-
 ## Notes
 - Default open simulation uses direct `img` fetches; enable headless path only if required.
+- Open simulation prioritizes ExactTarget/Salesforce Marketing Cloud open pixels (`cl.s4.exct.net/open.aspx`) when present in the email HTML.
 - Attachments are ignored; payload size should be limited upstream.
 - Workers acknowledge messages after successful processing; failed messages are requeued for retry.
+- Comprehensive structured logging is available for debugging open/click simulation behavior, including probability checks, pixel detection, and fetch results.
 
 For full details, see `docs/email-simulator-prd.md`.
