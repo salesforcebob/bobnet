@@ -5,6 +5,22 @@ edition = "2021"
 description = "High-performance async RabbitMQ worker for email simulation"
 authors = ["BobNet Team"]
 
+[lib]
+name = "bobnet"
+path = "src/lib.rs"
+
+[[bin]]
+name = "bobnet-worker"
+path = "src/main.rs"
+
+[[bin]]
+name = "bobnet-web"
+path = "src/bin/web.rs"
+
+[[bin]]
+name = "bobnet-processor"
+path = "src/bin/processor.rs"
+
 [dependencies]
 tokio = { version = "1", features = ["full"] }
 lapin = "2"
@@ -19,3 +35,15 @@ futures = "0.3"
 url = "2"
 thiserror = "1"
 anyhow = "1"
+
+# Web server dependencies
+axum = "0.7"
+tower-http = { version = "0.5", features = ["trace"] }
+
+# Email parsing
+mailparse = "0.14"
+
+# Cryptography for signature verification
+hmac = "0.12"
+sha2 = "0.10"
+hex = "0.4"

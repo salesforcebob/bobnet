@@ -40,6 +40,25 @@ pub struct Config {
 
     /// Maximum number of concurrent jobs to process
     pub worker_concurrency: usize,
+
+    // =========================================================================
+    // Web Server Configuration (NEW)
+    // =========================================================================
+
+    /// Port for the web server to listen on
+    pub port: u16,
+
+    /// Cloudflare authentication token for webhook verification
+    pub cloudflare_auth_token: Option<String>,
+
+    /// Mailgun signing key for HMAC signature verification
+    pub mailgun_signing_key: Option<String>,
+
+    /// Mailgun domain for recipient validation
+    pub mailgun_domain: Option<String>,
+
+    /// Maximum age in seconds for Mailgun webhook timestamps
+    pub mailgun_signature_max_age: u64,
 }
 
 impl Config {
@@ -83,6 +102,23 @@ impl Config {
                 .ok()
                 .and_then(|v| v.parse().ok())
                 .unwrap_or(100),
+
+            // Web server configuration
+            port: env::var("PORT")
+                .ok()
+                .and_then(|v| v.parse().ok())
+                .unwrap_or(8080),
+
+            cloudflare_auth_token: env::var("CLOUDFLARE_AUTH_TOKEN").ok(),
+
+            mailgun_signing_key: env::var("MAILGUN_SIGNING_KEY").ok(),
+
+            mailgun_domain: env::var("MAILGUN_DOMAIN").ok(),
+
+            mailgun_signature_max_age: env::var("MAILGUN_SIGNATURE_MAX_AGE")
+                .ok()
+                .and_then(|v| v.parse().ok())
+                .unwrap_or(300), // 5 minutes default
         }
     }
 }

@@ -17,11 +17,8 @@ use reqwest::Client;
 use tokio::signal;
 use tracing::{error, info, warn};
 
-use crate::config::Config;
+use bobnet::{Config, SIMULATOR_QUEUE};
 use crate::processor::{process_job, Job};
-
-/// Queue name - must match the Python publisher.
-const QUEUE_NAME: &str = "email_simulator";
 
 /// Run the RabbitMQ consumer.
 ///
@@ -63,7 +60,7 @@ pub async fn run(config: Config) -> Result<()> {
     // Declare the queue (durable to match Python publisher)
     channel
         .queue_declare(
-            QUEUE_NAME,
+            SIMULATOR_QUEUE,
             QueueDeclareOptions {
                 durable: true,
                 ..Default::default()
@@ -73,7 +70,7 @@ pub async fn run(config: Config) -> Result<()> {
         .await
         .context("Failed to declare queue")?;
 
-    info!(queue = QUEUE_NAME, "rabbitmq_queue_declared");
+    info!(queue = SIMULATOR_QUEUE, "rabbitmq_queue_declared");
 
     // Create a shared HTTP client for all requests
     let client = Client::builder()
@@ -86,7 +83,7 @@ pub async fn run(config: Config) -> Result<()> {
     // Start consuming messages
     let mut consumer = channel
         .basic_consume(
-            QUEUE_NAME,
+            SIMULATOR_QUEUE,
             "rust-worker",
             BasicConsumeOptions::default(),
             FieldTable::default(),
@@ -94,7 +91,7 @@ pub async fn run(config: Config) -> Result<()> {
         .await
         .context("Failed to start consumer")?;
 
-    info!(queue = QUEUE_NAME, "rabbitmq_consumer_started");
+    info!(queue = SIMULATOR_QUEUE, "rabbitmq_consumer_started");
     info!("worker_ready");
 
     // Clone channel for use in message handler
@@ -149,7 +146,7 @@ pub async fn run(config: Config) -> Result<()> {
                             .unwrap_or_else(|| "unknown".to_string());
 
                         info!(
-                            queue = QUEUE_NAME,
+                            queue = SIMULATOR_QUEUE,
                             message_id = %message_id,
                             delivery_tag = delivery_tag,
                             "rabbitmq_job_received"
@@ -182,7 +179,7 @@ pub async fn run(config: Config) -> Result<()> {
                                         );
                                     } else {
                                         info!(
-                                            queue = QUEUE_NAME,
+                                            queue = SIMULATOR_QUEUE,
                                             message_id = %message_id,
                                             "rabbitmq_job_completed"
                                         );
