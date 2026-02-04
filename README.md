@@ -1,20 +1,35 @@
 # BobNet Email Simulator
 
-Simulates customer behavior (opens and clicks) on inbound marketing emails. Runs on Heroku with a `web` dyno (FastAPI webhook) and a `worker` dyno (RabbitMQ consumer).
+High-performance email simulation system that simulates customer behavior (opens and clicks) on inbound marketing emails. Built in **Rust** for maximum throughput and efficiency.
 
 [![Deploy to Heroku](https://www.herokucdn.com/deploy/button.svg)](https://heroku.com/deploy?template=https://github.com/salesforcebob/bobnet)
 
 Just name it. Defaults are good.
 
+## Architecture
+
+```
+Webhooks → Rust Web Server → inbound_webhooks → Rust Processor → email_simulator → Rust Worker
+                (auth + enqueue)       (queue)        (parse)          (queue)       (simulate)
+```
+
+The system uses a **two-queue architecture** for maximum webhook throughput:
+
+1. **Web Server** (`bobnet-web`): Thin, fast Axum server that authenticates and immediately enqueues raw webhook payloads
+2. **Processor** (`bobnet-processor`): Background process that parses webhooks and prepares simulation jobs
+3. **Worker** (`bobnet-worker`): Email simulator that performs opens and clicks
+
 ## Features
 - **Cost-efficient inbound email processing via Cloudflare** (free tier available, Workers-based)
+- **High-throughput webhook reception** - web server responds in microseconds
 - Randomized open simulation via direct pixel fetch (default)
   - Prioritizes ExactTarget/Salesforce Marketing Cloud open pixels (`cl.s4.exct.net/open.aspx`)
   - Falls back to fetching other image resources in the email
 - Randomized click simulation with domain allow/deny filters
-- Message queue via **RabbitMQ** (CloudAMQP)
+- **Two-queue RabbitMQ architecture** for burst handling (CloudAMQP)
 - Structured JSON logging with detailed open/click tracking
 - Custom auth header verification for Cloudflare webhooks
+- HMAC-SHA256 signature verification for Mailgun webhooks
 - **Alternative**: Mailgun support (paid plan required)
 
 ## Quick Start (Cloudflare - Recommended)
@@ -34,31 +49,37 @@ Just name it. Defaults are good.
 
 ## Project Layout
 ```
-app/
-  web.py                 # FastAPI app (webhooks + health)
-  worker.py              # Job processing logic
-  worker_entry.py        # RabbitMQ consumer entrypoint
-  config.py              # Env configuration
-  logging.py             # JSON logging
-  models.py              # Pydantic models
-  queue.py               # RabbitMQ publisher
-  simulate/
-    html_parse.py        # HTML parsing helpers
-    openers.py           # Open simulation (direct)
-    clickers.py          # Click selection + execution
-  utils/
-    email_parse.py       # Raw email parsing (for Cloudflare)
-    mailgun_signature.py # Mailgun HMAC signature verification
-    user_agents.py       # UA rotation
-rust-worker/             # High-performance Rust worker (optional)
+rust-worker/             # All Rust binaries (web, processor, worker)
+  Cargo.toml             # Package with 3 binaries
   src/
-    main.rs              # Entry point
+    lib.rs               # Shared library
+    main.rs              # Worker binary entry point
+    bin/
+      web.rs             # Web server binary
+      processor.rs       # Processor binary
     config.rs            # Env configuration
     consumer.rs          # RabbitMQ consumer (lapin)
     processor.rs         # Job processing logic
+    queue/               # Queue types and publisher
+      mod.rs
+      types.rs           # InboundWebhook, SimulatorJob
+      publisher.rs       # Async RabbitMQ publisher
+    process/             # Webhook processing
+      mod.rs
+      email_parser.rs    # RFC 5322 parsing (mailparse)
+      mailgun.rs         # Mailgun payload processing
+      cloudflare.rs      # Cloudflare payload processing
+    web/                 # Web server handlers
+      mod.rs
+      handlers.rs        # Endpoint handlers
+      signature.rs       # HMAC signature verification
     html/                # HTML parsing (scraper)
     simulate/            # Open/click simulation (reqwest)
     util/                # User agent rotation
+app/                     # Legacy Python code (deprecated)
+  web.py                 # FastAPI app (webhooks + health)
+  worker.py              # Job processing logic
+  ...
 ```
 
 ## Configuration
@@ -137,18 +158,51 @@ You can also set individual click rates on specific links using the `data-click-
 2. **Combined Attributes:** Both `data-open-rate` and `data-click-rate` can be in the same `<div data-scope="global">` element - this is the recommended approach
 3. **Multiple Global Divs:** If multiple `<div data-scope="global">` elements are found, both functions will use the first div that contains their respective attribute (a warning is logged if multiple divs exist)
 
+#### Unsubscribe Link Filtering
+
+**ExactTarget unsubscribe links are automatically excluded from click simulation** unless they have an explicit `data-click-rate` override.
+
+Unsubscribe links matching the pattern `https://cl.S4.exct.net/unsub_center.aspx` (case-insensitive) will be filtered out during link selection to prevent accidental unsubscribes.
+
+**To allow clicking an unsubscribe link**, add a `data-click-rate` attribute:
+
+```html
+<a href="https://cl.S4.exct.net/unsub_center.aspx?email=test@example.com" data-click-rate="0.1">
+  Unsubscribe
+</a>
+```
+
+**Behavior:**
+- Unsubscribe links **without** `data-click-rate` are **never clicked** (filtered out)
+- Unsubscribe links **with** `data-click-rate` are **eligible for clicking** based on their rate
+- This protection applies regardless of global click rate settings or domain allow/deny lists
+
 ## Local Development
 
-1. Python 3.11+ (version managed via `.python-version`, currently `3.11`)
-2. RabbitMQ (e.g., `docker run -p 5672:5672 rabbitmq:3`)
-3. Create `.env` with `CLOUDAMQP_URL=amqp://guest:guest@localhost:5672/`
-4. Install deps: `pip install -r requirements.txt`
-5. Run web: `uvicorn app.web:app --reload --port 8000`
-6. Run worker: `python -m app.worker_entry`
+### Quick Start (Rust)
 
-Webhook endpoints:
-- Cloudflare: `POST http://localhost:8000/webhooks/cloudflare` (JSON) - **Recommended**
-- Mailgun: `POST http://localhost:8000/webhooks/mailgun` (form-encoded) - Alternative
+1. Install Rust: `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh`
+2. Start RabbitMQ: `docker run -p 5672:5672 rabbitmq:3`
+3. Set environment: `export CLOUDAMQP_URL=amqp://guest:guest@localhost:5672/`
+4. Build: `cargo build --release`
+5. Run (in separate terminals):
+   ```bash
+   ./target/release/bobnet-web
+   ./target/release/bobnet-processor
+   ./target/release/bobnet-worker
+   ```
+
+### Legacy Python (Deprecated)
+
+1. Python 3.11+ (version managed via `.python-version`)
+2. Install deps: `pip install -r requirements.txt`
+3. Run web: `uvicorn app.web:app --reload --port 8000`
+4. Run worker: `python -m app.worker_entry`
+
+### Webhook Endpoints
+
+- Cloudflare: `POST http://localhost:8080/webhooks/cloudflare` (JSON) - **Recommended**
+- Mailgun: `POST http://localhost:8080/webhooks/mailgun` (form-encoded) - Alternative
 
 ## Heroku Deployment
 
@@ -285,77 +339,128 @@ pytest -q
   - Response: `200 OK` with `{ "status": "enqueued", "message_id": "..." }`
   - Security: HMAC-SHA256 signature verification when `MAILGUN_SIGNING_KEY` is set
 
-## High-Performance Rust Worker (Optional)
+## Rust Components
 
-For significantly higher throughput, you can use the Rust-based worker instead of the Python worker. The Rust worker uses Tokio for async processing and can handle hundreds of concurrent messages.
+The entire system is built in Rust for maximum throughput and efficiency. All three components use Tokio for async processing.
 
-### Performance Comparison
+### Performance
 
-| Worker | Throughput | Latency | Concurrency |
-|--------|------------|---------|-------------|
-| Python | ~0.11 items/sec | 9+ seconds/item | 1 (sequential) |
-| Rust | 50-100+ items/sec | Sub-second/item | 100+ (concurrent) |
+| Component | Throughput | Latency |
+|-----------|------------|---------|
+| Web Server | 10,000+ req/sec | Sub-millisecond |
+| Processor | 5,000+ msg/sec | ~1ms per message |
+| Worker | 100+ items/sec | Variable (network-bound) |
 
-### Building the Rust Worker
+### Building
 
 ```bash
 # Install Rust (if not already installed)
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 
-# Build the release binary
-cd rust-worker
+# Build all binaries
 cargo build --release
 ```
 
-The binary will be at `./target/release/bobnet-worker`.
+Binaries will be at `./target/release/`:
+- `bobnet-web` - Web server
+- `bobnet-processor` - Webhook processor
+- `bobnet-worker` - Email simulator
 
 ### Running Locally
 
 ```bash
-# Set environment variables (same as Python worker)
+# Set environment variables
 export CLOUDAMQP_URL=amqp://guest:guest@localhost:5672/
+export PORT=8080
+export CLOUDFLARE_AUTH_TOKEN=your-token  # optional
 
-# Run the Rust worker
+# Run all three (in separate terminals)
+./target/release/bobnet-web
+./target/release/bobnet-processor
 ./target/release/bobnet-worker
 ```
 
-### Rust Worker Configuration
+### Configuration
 
-The Rust worker uses the same environment variables as the Python worker, plus:
+All components share these environment variables:
 
-- `WORKER_CONCURRENCY` (default `100`): Maximum number of concurrent job processors
+- `CLOUDAMQP_URL`: RabbitMQ connection URL (required)
+- `WORKER_CONCURRENCY` (default `100`): Max concurrent processors
 
-### Heroku Deployment with Rust
+**Web Server:**
+- `PORT` (default `8080`): HTTP port to listen on
+- `CLOUDFLARE_AUTH_TOKEN`: Token for X-Custom-Auth header verification
+- `MAILGUN_SIGNING_KEY`: Key for HMAC signature verification
+- `MAILGUN_DOMAIN`: Optional domain for recipient validation
 
-To deploy the Rust worker on Heroku:
+**Worker:**
+- `SIMULATE_OPEN_PROBABILITY` (default `0.7`)
+- `SIMULATE_CLICK_PROBABILITY` (default `0.3`)
+- `MAX_CLICKS` (default `2`)
+- `OPEN_DELAY_RANGE_MS` (default `500,5000`)
+- `CLICK_DELAY_RANGE_MS` (default `300,4000`)
+
+### Heroku Deployment
 
 1. Add the Rust buildpack:
    ```bash
    heroku buildpacks:add emk/rust --app your-app
    ```
 
-2. Scale the `rust-worker` dyno:
+2. Scale the dynos:
    ```bash
-   heroku ps:scale rust-worker=1 worker=0 --app your-app
+   heroku ps:scale web=1 processor=1 rust-worker=1 --app your-app
    ```
 
-The `Procfile` includes both worker types:
-- `worker`: Python worker (sequential processing)
-- `rust-worker`: Rust worker (concurrent processing)
+The `Procfile` defines:
+- `web`: Rust web server (receives webhooks)
+- `processor`: Rust processor (parses webhooks)
+- `rust-worker`: Rust worker (simulates opens/clicks)
 
-### Rust Worker Features
+### Component Features
 
-- **Async/concurrent processing**: Uses Tokio runtime for non-blocking I/O
-- **High prefetch**: Fetches up to 100 messages at a time from RabbitMQ
-- **Connection pooling**: Reuses HTTP connections for efficiency
-- **Graceful shutdown**: Handles SIGINT/SIGTERM for clean exits
-- **Identical behavior**: Same simulation logic as Python worker
+**Web Server (`bobnet-web`):**
+- Axum-based HTTP server
+- HMAC-SHA256 signature verification for Mailgun
+- Custom header verification for Cloudflare
+- Immediate queue publishing (no parsing in request path)
+- Graceful shutdown on SIGINT/SIGTERM
+
+**Processor (`bobnet-processor`):**
+- Consumes from `inbound_webhooks` queue
+- RFC 5322 email parsing using `mailparse`
+- Message-Id extraction and fallback generation
+- Publishes to `email_simulator` queue
+- Concurrent message processing
+
+**Worker (`bobnet-worker`):**
+- Consumes from `email_simulator` queue
+- Opens: Fetches tracking pixels (prioritizes ExactTarget)
+- Clicks: Weighted link selection with domain filtering
+- User agent rotation
+- Connection pooling via reqwest
 
 ## Notes
-- Default open simulation uses direct `img` fetches; enable headless path only if required.
-- Open simulation prioritizes ExactTarget/Salesforce Marketing Cloud open pixels (`cl.s4.exct.net/open.aspx`) when present in the email HTML.
-- Attachments are ignored; payload size should be limited upstream.
-- Workers acknowledge messages after successful processing; failed messages are requeued for retry.
-- Comprehensive structured logging is available for debugging open/click simulation behavior, including probability checks, pixel detection, and fetch results.
+
+### Architecture
+- **Two-queue system**: `inbound_webhooks` (raw payloads) and `email_simulator` (parsed jobs)
+- Web server enqueues immediately, parsing happens asynchronously in the processor
+- This allows handling massive webhook bursts without backpressure
+
+### Simulation
+- Default open simulation uses direct `img` fetches; enable headless path only if required
+- Open simulation prioritizes ExactTarget/Salesforce Marketing Cloud open pixels (`cl.s4.exct.net/open.aspx`)
+- Attachments are ignored; payload size should be limited upstream
+
+### Reliability
+- Messages are acknowledged after successful processing
+- Parse failures in the processor are logged but not requeued (malformed data)
+- Simulation failures in the worker are requeued for retry
+- Graceful shutdown ensures in-flight messages complete
+
+### Logging
+- Comprehensive structured JSON logging
+- All components log message flow with correlation IDs
+- Probability checks, pixel detection, and fetch results are logged
 
 For full details, see `docs/email-simulator-prd.md`.

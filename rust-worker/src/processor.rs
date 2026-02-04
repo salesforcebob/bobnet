@@ -11,14 +11,14 @@ use serde::Deserialize;
 use tokio::time::sleep;
 use tracing::info;
 
-use crate::config::Config;
-use crate::html::{
+use bobnet::config::Config;
+use bobnet::html::{
     extract_image_sources, extract_links_with_rates, find_exacttarget_open_pixel,
     find_global_click_rate, find_global_open_rate,
 };
-use crate::simulate::clicker::{choose_links_weighted, filter_links_with_rates, perform_clicks};
-use crate::simulate::opener::{fetch_single_url, simulate_open};
-use crate::util::user_agent::{build_headers, pick_user_agent};
+use bobnet::simulate::clicker::{choose_links_weighted, filter_links_with_rates, perform_clicks};
+use bobnet::simulate::opener::{fetch_single_url, simulate_open};
+use bobnet::util::user_agent::{build_headers, pick_user_agent};
 
 /// Job payload received from the RabbitMQ queue.
 #[derive(Debug, Deserialize)]
