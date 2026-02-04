@@ -6,9 +6,21 @@ import time
 from typing import Any, Dict
 
 from .config import settings
-from .simulate.html_parse import extract_image_sources, extract_links, find_exacttarget_open_pixel
+from .simulate.html_parse import (
+    extract_image_sources,
+    extract_links,
+    extract_links_with_rates,
+    find_exacttarget_open_pixel,
+    find_global_click_rate,
+)
 from .simulate.openers import simulate_open_via_direct, fetch_single_url
-from .simulate.clickers import filter_links, choose_links, perform_clicks
+from .simulate.clickers import (
+    choose_links,
+    choose_links_weighted,
+    filter_links,
+    filter_links_with_rates,
+    perform_clicks,
+)
 from .utils.user_agents import pick_user_agent
 
 logger = logging.getLogger(__name__)
@@ -212,15 +224,32 @@ def process_mail(job: Dict[str, Any]) -> Dict[str, Any]:
             })
 
     clicks = 0
+    
+    # Check for global click rate override
+    global_click_rate = find_global_click_rate(html)
+    effective_click_probability = (
+        global_click_rate 
+        if global_click_rate is not None 
+        else settings.simulate_click_probability
+    )
+    
+    logger.info("worker_click_rate_determined", extra={
+        "message_id": message_id,
+        "global_override_found": global_click_rate is not None,
+        "global_override_value": global_click_rate,
+        "default_probability": settings.simulate_click_probability,
+        "effective_probability": effective_click_probability,
+    })
+    
     click_roll = random.random()
     logger.info("worker_click_roll", extra={
         "message_id": message_id,
         "roll": click_roll,
-        "threshold": settings.simulate_click_probability,
-        "will_attempt_click": click_roll < settings.simulate_click_probability,
+        "threshold": effective_click_probability,
+        "will_attempt_click": click_roll < effective_click_probability,
     })
     
-    if click_roll < settings.simulate_click_probability:
+    if click_roll < effective_click_probability:
         # Log HTML content before link extraction
         logger.info("worker_html_before_link_extraction", extra={
             "message_id": message_id,
@@ -228,22 +257,35 @@ def process_mail(job: Dict[str, Any]) -> Dict[str, Any]:
             "html_preview": html[:500] if html else None,
         })
         
-        links = extract_links(html)
-        filtered_links = filter_links(links, settings.allow_domains, settings.deny_domains)
-        chosen = choose_links(filtered_links, settings.max_clicks)
+        # Extract links with their individual click rates
+        links_with_rates = extract_links_with_rates(html, global_click_rate)
+        filtered_links = filter_links_with_rates(
+            links_with_rates, 
+            settings.allow_domains, 
+            settings.deny_domains
+        )
+        chosen = choose_links_weighted(
+            filtered_links, 
+            settings.max_clicks, 
+            effective_click_probability
+        )
         
         logger.info("worker_click_analysis", extra={
             "message_id": message_id,
-            "total_links_found": len(links),
+            "total_links_found": len(links_with_rates),
+            "links_with_individual_rates": sum(
+                1 for l in links_with_rates if l.click_rate is not None
+            ),
             "links_after_filter": len(filtered_links),
             "links_chosen": len(chosen),
             "chosen_urls": [link[:80] for link in chosen],
             "allow_domains": settings.allow_domains,
             "deny_domains": settings.deny_domains,
             "html_length_processed": html_length,
+            "effective_click_probability": effective_click_probability,
         })
         
-        if len(links) == 0 and html:
+        if len(links_with_rates) == 0 and html:
             logger.warning("worker_no_links_found", extra={
                 "message_id": message_id,
                 "html_length": html_length,
