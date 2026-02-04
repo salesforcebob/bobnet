@@ -22,6 +22,7 @@ pub fn extract_image_sources(html: &str) -> Vec<String> {
 }
 
 /// Extract all link URLs from HTML (deduplicated).
+#[allow(dead_code)] // Used in tests
 pub fn extract_links(html: &str) -> Vec<String> {
     let document = Html::parse_document(html);
     let selector = Selector::parse("a[href]").expect("Invalid selector");

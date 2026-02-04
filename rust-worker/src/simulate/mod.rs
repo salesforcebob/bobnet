@@ -2,6 +2,3 @@
 
 pub mod clicker;
 pub mod opener;
-
-pub use clicker::*;
-pub use opener::*;

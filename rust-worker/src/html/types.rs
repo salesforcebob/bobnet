@@ -11,11 +11,13 @@ pub struct LinkWithRate {
 
 impl LinkWithRate {
     /// Create a new LinkWithRate with an optional click rate.
+    #[allow(dead_code)] // Used in tests
     pub fn new(url: String, click_rate: Option<f64>) -> Self {
         Self { url, click_rate }
     }
 
     /// Create a new LinkWithRate with an individual click rate.
+    #[allow(dead_code)] // May be useful for future use
     pub fn with_rate(url: String, rate: f64) -> Self {
         Self {
             url,
