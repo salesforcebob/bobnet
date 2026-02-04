@@ -5,4 +5,4 @@
 VERSION=stable
 
 # Path to the Cargo.toml (relative to repo root)
-# BUILD_PATH=rust-worker
+BUILD_PATH=rust-worker
