@@ -10,4 +10,6 @@ __pycache__/
 
 # Rust
 rust-worker/target/
+rust-worker/debug/
+target/
 **/*.rs.bk

@@ -14,7 +14,7 @@ use tracing::info;
 use crate::config::Config;
 use crate::html::{
     extract_image_sources, extract_links_with_rates, find_exacttarget_open_pixel,
-    find_global_click_rate,
+    find_global_click_rate, find_global_open_rate,
 };
 use crate::simulate::clicker::{choose_links_weighted, filter_links_with_rates, perform_clicks};
 use crate::simulate::opener::{fetch_single_url, simulate_open};
@@ -114,14 +114,26 @@ pub async fn process_job(client: &Client, config: &Config, job: &Job) -> Process
     );
     sleep(Duration::from_millis(delay_ms)).await;
 
+    // Check for global open rate override in HTML
+    let global_open_rate = find_global_open_rate(html);
+    let effective_open_probability = global_open_rate.unwrap_or(config.simulate_open_probability);
+
+    info!(
+        message_id = %message_id,
+        global_override_found = global_open_rate.is_some(),
+        global_override_value = ?global_open_rate,
+        effective_probability = effective_open_probability,
+        "worker_open_rate_determined"
+    );
+
     // Simulate open with probability check
     let mut opened = false;
-    let will_attempt_open = open_roll < config.simulate_open_probability;
+    let will_attempt_open = open_roll < effective_open_probability;
 
     info!(
         message_id = %message_id,
         roll = open_roll,
-        threshold = config.simulate_open_probability,
+        threshold = effective_open_probability,
         will_attempt_open = will_attempt_open,
         "worker_open_roll"
     );

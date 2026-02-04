@@ -86,6 +86,59 @@ rust-worker/             # High-performance Rust worker (optional)
 - `CLICK_DELAY_RANGE_MS` (default `300,4000`)
 - `REQUEST_TIMEOUT_MS` (default `8000`)
 
+### HTML-Based Overrides
+
+You can override simulation probabilities on a per-email basis by including special HTML attributes in your email content. These overrides take precedence over environment variable settings.
+
+#### Global Open Rate Override
+
+Add a `<div>` with `data-scope="global"` and `data-open-rate` to override the open probability for the entire email:
+
+```html
+<div data-scope="global" data-open-rate="0.9">
+  <!-- Your email content -->
+</div>
+```
+
+**Example:** Setting `data-open-rate="0.9"` means 90% of recipients will simulate opening this email, regardless of the `SIMULATE_OPEN_PROBABILITY` environment variable.
+
+#### Global Click Rate Override
+
+Add a `<div>` with `data-scope="global"` and `data-click-rate` to override the click probability for the entire email:
+
+```html
+<div data-scope="global" data-click-rate="0.5">
+  <!-- Your email content -->
+</div>
+```
+
+**Example:** Setting `data-click-rate="0.5"` means 50% of recipients will simulate clicking links in this email, regardless of the `SIMULATE_CLICK_PROBABILITY` environment variable.
+
+#### Per-Link Click Rate Override
+
+You can also set individual click rates on specific links using the `data-click-rate` attribute:
+
+```html
+<a href="https://example.com/important" data-click-rate="0.8">Important Link</a>
+<a href="https://example.com/regular" data-click-rate="0.2">Regular Link</a>
+```
+
+**Behavior:**
+- Links with `data-click-rate` use their individual rate
+- Links without `data-click-rate` use the global click rate (from `data-scope="global"` or `SIMULATE_CLICK_PROBABILITY`)
+- Link selection uses weighted random selection based on these rates
+
+#### Override Rules
+
+1. **Value Range:** All rate values are clamped to `0.0` - `1.0` (values below 0 become 0.0, values above 1.0 become 1.0)
+2. **Multiple Global Divs:** If multiple `<div data-scope="global">` elements are found, only the first one is used (a warning is logged)
+3. **Combined Overrides:** You can use both global open and click rate overrides in the same email:
+   ```html
+   <div data-scope="global" data-open-rate="0.9" data-click-rate="0.5">
+     <!-- Email content with links -->
+   </div>
+   ```
+
 ## Local Development
 
 1. Python 3.11+ (version managed via `.python-version`, currently `3.11`)

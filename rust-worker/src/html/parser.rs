@@ -79,6 +79,61 @@ pub fn find_exacttarget_open_pixel(html: &str) -> Option<String> {
     None
 }
 
+/// Find global open rate override from HTML.
+///
+/// Searches for `<div data-scope="global" data-open-rate="...">` and returns
+/// the parsed float value (0.0-1.0).
+pub fn find_global_open_rate(html: &str) -> Option<f64> {
+    let document = Html::parse_document(html);
+    let selector = Selector::parse(r#"div[data-scope="global"]"#).expect("Invalid selector");
+
+    let global_divs: Vec<_> = document.select(&selector).collect();
+
+    info!(
+        total_divs_with_scope_global = global_divs.len(),
+        html_length = html.len(),
+        "Searching for global open rate"
+    );
+
+    for (idx, div) in global_divs.iter().enumerate() {
+        if let Some(rate_attr) = div.value().attr("data-open-rate") {
+            match rate_attr.parse::<f64>() {
+                Ok(rate) => {
+                    let clamped = rate.clamp(0.0, 1.0);
+                    
+                    if rate < 0.0 {
+                        warn!(div_index = idx, value = rate, clamped_to = 0.0, "Global open rate below zero");
+                    } else if rate > 1.0 {
+                        warn!(div_index = idx, value = rate, clamped_to = 1.0, "Global open rate above one");
+                    }
+
+                    if idx > 0 {
+                        warn!(
+                            using_first = true,
+                            total_found = global_divs.len(),
+                            "Multiple global open rate divs found"
+                        );
+                    }
+
+                    info!(div_index = idx, value = clamped, raw_attribute = rate_attr, "Found global open rate");
+                    return Some(clamped);
+                }
+                Err(e) => {
+                    warn!(
+                        div_index = idx,
+                        raw_attribute = rate_attr,
+                        error = %e,
+                        "Invalid global open rate value"
+                    );
+                }
+            }
+        }
+    }
+
+    info!(total_divs_checked = global_divs.len(), "Global open rate not found");
+    None
+}
+
 /// Find global click rate override from HTML.
 ///
 /// Searches for `<div data-scope="global" data-click-rate="...">` and returns
@@ -259,6 +314,30 @@ mod tests {
 
         let pixel = find_exacttarget_open_pixel(html);
         assert!(pixel.is_none());
+    }
+
+    #[test]
+    fn test_find_global_open_rate() {
+        let html = r#"
+            <html>
+                <div data-scope="global" data-open-rate="0.85"></div>
+            </html>
+        "#;
+
+        let rate = find_global_open_rate(html);
+        assert_eq!(rate, Some(0.85));
+    }
+
+    #[test]
+    fn test_find_global_open_rate_clamped() {
+        let html = r#"
+            <html>
+                <div data-scope="global" data-open-rate="1.5"></div>
+            </html>
+        "#;
+
+        let rate = find_global_open_rate(html);
+        assert_eq!(rate, Some(1.0));
     }
 
     #[test]
