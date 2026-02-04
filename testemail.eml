@@ -1,0 +1,404 @@
+Delivered-To: bob.ullery@salesforce.com
+Received: by 2002:a05:7010:7d52:b0:4ec:8ce6:74bc with SMTP id t18csp3117351mdn;
+        Wed, 4 Feb 2026 06:28:39 -0800 (PST)
+X-Received: by 2002:a53:d015:0:b0:649:dc5c:192f with SMTP id 956f58d0204a3-649dc5c1d2bmr2006574d50.9.1770215319104;
+        Wed, 04 Feb 2026 06:28:39 -0800 (PST)
+ARC-Seal: i=1; a=rsa-sha256; t=1770215319; cv=none;
+        d=google.com; s=arc-20240605;
+        b=U3TJbwbrVZDx8DAM4wMclr6xkCN5bRglZDJsN4y8hzcrFGA89OW5/oVbOstbXvUKxi
+         5h7UoboOb8ITNF6rKzhh9m0l8OyYsHSZrbkbZGusFPB4Agni/X1/Rvq9nbKEUGQZGH11
+         M6PE8oLUjaAUdXI39p1m1THxzL1So0e4G9RMjMqGbanBT4IxhPCzDR65NGFHIyskJqSy
+         wInx10gHcLorK3P1h/b/TocUeOjD2srJQQPKBzc2uH9pdA44yDny0eJRYc+e6KS1UfJh
+         7nLcNMU0p9QbZCrt39qbMXnJP63ck8wL8kVjpboHVllSeYrHTxloKWaXFVyrACMVkGDe
+         pNpw==
+ARC-Message-Signature: i=1; a=rsa-sha256; c=relaxed/relaxed; d=google.com; s=arc-20240605;
+        h=message-id:mime-version:list-unsubscribe-post:list-unsubscribe:date
+         :subject:to:from:dkim-signature:dkim-signature;
+        bh=76Bu5K66rSxEdJsbZ6oISl80sp24292iC+6TW6jjLQE=;
+        fh=S5d2mZishfC++meYXm47CxIHomxKDY2w/JU/BqU2mqE=;
+        b=jFwYoROK7oP/etdwMkZ9OHU8N4tDghhMECFazv+i8aZ3pI4aafx/LrhHlwHhKBbZwm
+         h9CO/MrZbN/sP1V6yMBAsWJrt8lgsZkY7z2zxmLMFnLhnEMNwZnzK78oIwh5NM/liLDC
+         s36BELb5Ja+ouKflK54IhowZlPVCAosPrU/TRtmWa2bcy5OsJLzDdNb8rVIK0xtTv2xD
+         2FD0xIvoS0NfnsrLIpHxx2vtV4E7A/Bt5s+zcEJZlbr61Z+E/0DSBUFmrNIb+K5gyqoI
+         ewGVS91fRkmbF7oQNcErl5jJaukLtS4RUA6sf5b9ret9KSocOwBf+XvfuuCxk9LEkMut
+         Ejjw==;
+        dara=google.com
+ARC-Authentication-Results: i=1; mx.google.com;
+       dkim=pass header.i=@salesforce.com header.s=200608 header.b="KiEB/WAf";
+       dkim=pass header.i=@s4.y.mc.salesforce.com header.s=fbldkim4 header.b=bU8a9uBF;
+       spf=pass (google.com: domain of bounce-rwqzxkqcaeauppm7jcj7itl5uu.40152@bounce.s4.exacttarget.com designates 199.122.127.2 as permitted sender) smtp.mailfrom=bounce-RWQZXKQCAEAUPPM7JCJ7ITL5UU.40152@bounce.s4.exacttarget.com
+Return-Path: <bounce-RWQZXKQCAEAUPPM7JCJ7ITL5UU.40152@bounce.s4.exacttarget.com>
+Received: from mx0b-00177002.pphosted.com (mx0b-00177002.pphosted.com. [148.163.154.137])
+        by mx.google.com with ESMTPS id 956f58d0204a3-649dc5f80f7si2150096d50.110.2026.02.04.06.28.38
+        for <bob.ullery@salesforce.com>
+        (version=TLS1_3 cipher=TLS_AES_256_GCM_SHA384 bits=256/256);
+        Wed, 04 Feb 2026 06:28:39 -0800 (PST)
+Received-SPF: pass (google.com: domain of bounce-rwqzxkqcaeauppm7jcj7itl5uu.40152@bounce.s4.exacttarget.com designates 199.122.127.2 as permitted sender) client-ip=199.122.127.2;
+Authentication-Results: mx.google.com;
+       dkim=pass header.i=@salesforce.com header.s=200608 header.b="KiEB/WAf";
+       dkim=pass header.i=@s4.y.mc.salesforce.com header.s=fbldkim4 header.b=bU8a9uBF;
+       spf=pass (google.com: domain of bounce-rwqzxkqcaeauppm7jcj7itl5uu.40152@bounce.s4.exacttarget.com designates 199.122.127.2 as permitted sender) smtp.mailfrom=bounce-RWQZXKQCAEAUPPM7JCJ7ITL5UU.40152@bounce.s4.exacttarget.com
+Received: from pps.filterd (m0216108.ppops.net [127.0.0.1])
+	by mx0b-00177002.pphosted.com (8.18.1.11/8.18.1.11) with ESMTP id 614DAC1T1805745
+	for <bob.ullery@salesforce.com>; Wed, 4 Feb 2026 14:28:38 GMT
+Authentication-Results: ppops.net;
+	spf=pass smtp.mailfrom=bounce-RWQZXKQCAEAUPPM7JCJ7ITL5UU.40152@bounce.s4.exacttarget.com;
+	dkim=pass header.s=200608 header.d=salesforce.com;
+	dkim=pass header.s=fbldkim4 header.d=s4.y.mc.salesforce.com;
+	dmarc=pass header.from=salesforce.com
+Received: from mta.sfmc-demo.com (mta.sfmc-demo.com [199.122.127.2])
+	by mx0b-00177002.pphosted.com (PPS) with ESMTPS id 4c428kdexn-1
+	(version=TLSv1.2 cipher=ECDHE-RSA-AES256-GCM-SHA384 bits=256 verify=NOT)
+	for <bob.ullery@salesforce.com>; Wed, 04 Feb 2026 14:28:38 +0000 (GMT)
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; s=200608; d=salesforce.com;
+ h=From:To:Subject:Date:List-Unsubscribe:List-Unsubscribe-Post:MIME-Version:
+ Message-ID:Content-Type; i=bob.ullery@salesforce.com;
+ bh=76Bu5K66rSxEdJsbZ6oISl80sp24292iC+6TW6jjLQE=;
+ b=KiEB/WAfVlkJ/hnQEXs03yIaFTDFIKFPRvj3xVn3hVBvPUhqa8dMtX7fKDglsagF9wHY5g0clHwi
+   ZPbqKE/R/Cz4TyBn1oEGY9kDKxOvPw9E2dTcP4EXqRhBFcYvqY8y+unr2Xm3Fyijk7dIfvmH5y0Y
+   pd6dzzaBnKUWHTgcQV0=
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; s=fbldkim4; d=s4.y.mc.salesforce.com;
+ h=From:To:Subject:Date:List-Unsubscribe:MIME-Version:Message-ID:Content-Type;
+ bh=76Bu5K66rSxEdJsbZ6oISl80sp24292iC+6TW6jjLQE=;
+ b=bU8a9uBFfngSxUfngk0HNcYMSfEb2czRrjq1muzSLhJgMkpNsOVK8+EauQ0j0Hi087BfIrn59W/J
+   7fZOu4+UuHso9xSShtMPFWss6huvaoVpTL6YInTw1NS96Av1ke4voj0kZPQiLRSnRr29AROBR/mz
+   fMMjVlG7zL9laHSLNbcsJhTDy+CAe2Ghsi5u9ezn4GElejMipxNCGdN9XZw9eeUhYC6zmmqVndek
+   niUhuaMHDr62TrHg3VKI/vFYoTH4FoSwSj4wyCpeXYiGbMGMIRZ1rnmZ4GN75b66v8ouV3iWjirL
+   al4d4rQBE/R7y1XUqaT7E0cEwv+T8Scn9fWFVQ==
+Received: by mta.sfmc-demo.com id hgdbpc2fmd40 for <bob.ullery@salesforce.com>; Wed, 4 Feb 2026 14:28:36 +0000 (envelope-from <bounce-RWQZXKQCAEAUPPM7JCJ7ITL5UU.40152@bounce.s4.exacttarget.com>)
+From: "Marketing Cloud Demo Org" <bob.ullery@salesforce.com>
+To: <bob.ullery@salesforce.com>
+Subject: This is a test of BobNet
+Date: Wed, 04 Feb 2026 08:28:36 -0600
+List-Unsubscribe: <https://cl.S4.exct.net/subscription_center.aspx?jwt=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJtaWQiOiI1MjMwMjYxMDYiLCJzIjoiMTY2NjExMzIxMSIsImxpZCI6IjE3MzE1NSIsImoiOiIyOTY1Nzg2IiwiamIiOiIwIiwiZCI6IjQwMTUyIn0.3UK2bAHAJ1X2Y5msXPlcYKMSYqrbwMwWtF8jo3GiGE4>, <mailto:leave-I4GQCPJMYP7E5LOVKGES6RO6QU.40152@leave.s4.exacttarget.com>
+List-Unsubscribe-Post: List-Unsubscribe=One-Click
+MIME-Version: 1.0
+X-SFMC-Stack: 4
+x-job: 523026106_2965786
+Message-ID: <2b0c1a47-59c8-4b41-8dfd-ab1a73480bf7@las1s04mta1146.xt.local>
+Content-Type: multipart/alternative;
+	boundary="6q4J9HtEFS2c=_?:"
+X-CLX-Response: 1TFkXGxoaHBEKWUQXaU9wa0sFZ2lTYxIRClhYF2IFZmZrTGFcbU5JEQp4Thd
+ ma09ZGmlTHxNBYBEKeUwXZxNmGExlfG1kRkYRCkNIFwcZGBkRCkNZFwcZEh4RCkNJFxoEGhoaEQ
+ pZTRduT0ZDXE9YEQpZSRcRClleF2xseREKSUYXWUtGT1lMRVhJT3VCRVleT04YEQpJRxd4T00RC
+ kNOFxNwSGEdE0lSRmlpSRsfHHNCWFt+fHlfW21bdWldGgdDEQpYXBcfBBoEHhsaBRsaBBsbGgQb
+ GR4EGRkQGx4aHxoRCl5ZF01fel1SEQpNXBcZGR4RCkxGF29ra2traxEKQk8XYVltS0VcH195Qxw
+ RCkNaFxsTEwQbGBgEGxgdBBgRCkJeFxsRCkJGF21cGB1vQGdtTVplEQpCRxdocllMcHsZZll/ax
+ EKQlwXGxEKXk4XGxEKQksXZmtPWRppUx8TQWARCkJJF2ZrT1kaaVMfE0FgEQpCRRdkQmtaRE1jY
+ H54TBEKQk4XZmtPWRppUx8TQWARCkJMF2IFZmZrTGFcbU5JEQpCbBdrSGNCRENARmNHehEKQkAX
+ Y2hTTHMdfERPXRMRCkJYF2IFZmZrTGFcbU5JEQp5QxdmYnxvc0RTT3tyeREKWUsXExMYHBEKcGg
+ XaGJgWhloGE1CcGMQGhEKcGgXY3BvfXpLbx8fH0wQGRoRCnBoF2FzR1pyblkea3lmEBoRCnBoF2
+ wdb15bQEhEaXBYEBoRCnBoF2NlG3NNbVBIRnweEBkaEQpwaBdlbltnUk9af2hPexAZGhEKcGgXY
+ BhvRgF5W1lCEnwQGhEKcGgXbnxTQVNSGl5bZF8QHhIRCnB9F2NcXFN4ARtmXRhbEBoRCnB9F2tL
+ HX5uBXJac1kcEBoRCnB9F21yYxweQhthHHsYEBoRCnB9F2ZjcG8FaWBLGmJkEBoRCnB9F21NZxl
+ 8e19bXmwbEBoRCnB9F2xTcmdsWUtvWltkEBoRCnB9F2hSWFMfGlNSa0JEEBoRCnB9F2RZexlAZU
+ kYYn9ZEBoRCnB9F2NofBxYcxJkYlluEBoRCnB9F2xyQ1hbRl4eWm1EEBoRCnB9F2V6E3p5HkITZ
+ 0hGEB0aEQpwfRdkehtLXF9DQWVQcxAaEQpwfRdlZklofmNffntgTxAdGhEKcH0XZUliAXsbSFMe
+ GgEQGhEKcH0XbENLT01PUHxgBWkQGhEKcH0XaGxPbhtmcERSQ2sQGhEKcH0XemkfbBt9TXtsbG4
+ QExIRCnB9F2lCUx0FXx8eQ3NsEBMaEQpwfRd6RntBYWYaX0RSXRATHxEKcH0XZkhYfHxoS2ddE0
+ UQEx8RCnB9F2J/X2hIW2lnQm1kEBoRCnB9F21tfB9CRVB5ekIbEBoRCnB9F29pUkAYeFMTY0VHE
+ BoRCnB9F2JkG2tcBXB+Xlt+EBoRCnB9F2h8YW1wUm1eH2t5EBoRCnB9F2ZPc1tQaXtebHp9EB8Z
+ EQpwfRdiAV4FYGV4aXlocxAaEQpwfRdrRk5hTXhDHmdoGBAaEQpwfRdkGmNbaQVZXwFyaxAaEQp
+ wfxdlclpFQEFSU18YZxAeHREKcF8Xa39zZlJzQEt6ZHIQHRsRCnB/F2VlXVITa0ZbQUhjEBMSEQ
+ pwXxdpW1sdTWNtbRpGZBAbGhkRCnBfF2lYRhxfEkNJeWITEBkaEQpwXxdmGUdmGRtgQXJAeRAZH
+ REKcF8XbAVwZF5jWV99XhkQGBgRCnBfF29uYB5FUFBAeV5GEBMaEQpwXxdmXEdTRGEaBUISSxAT
+ EhEKcH8XZ0Z8bkAYRhJQckgQHhIRCnBfF29oQ1t/c15/Elx+EB8eEQpwbBdjbnwBcEUdUGRnHBA
+ aEQptfhcaEQpYTRdLESA=
+X-Authority-Analysis: v=2.4 cv=KanfcAYD c=1 sm=1 tr=0 ts=69835796 b=1 cx=c_pps
+ a=yxZvJWeL1pZ7K3Bc14PQHw==:117 a=yxZvJWeL1pZ7K3Bc14PQHw==:17
+ a=HzLeVaNsDn8A:10 a=y1Ui6C2ZIIIA:10 a=7Du5jyfatMgA:10
+ a=Kan8h273Bse8B8Jy5C1n:22 a=r77TgQKjGQsHNAKrUKIA:9 a=0rCVaXwTAAAA:8
+ a=qiNeroL2AAAA:8 a=39e_2gbnbeTet-BNiWgA:9 a=lqcHg5cX4UMA:10 a=QEXdDO2ut3YA:10
+ a=10THlLYXvx8A:10 a=88WS5FKEtOgA:10 a=OOkMkhkwXSkA:10
+ a=z2U-W3hJrleVIN9YIjzO:22 a=3IeLnGJ6AAAA:8 a=FTg-WU4ZAAAA:8
+ a=Sur59QF6brTXsKkeXvsA:9 a=EQ0oEpJ4mhHfTPQL:21 a=frz4AuCg-hUA:10
+ a=_W_S_7VecoQA:10 a=8FalTm1Z0YUA:10 a=Ru97nHiPDtp4odn3vKgu:22
+ a=SRD58Kjar-FrDRMrJIRk:22
+X-CLX-Shades: Deliver
+X-Proofpoint-GUID: 9ZbK79cxlCCc156YhrqTVSuqGq_Cw0-i
+X-Proofpoint-ORIG-GUID: 9ZbK79cxlCCc156YhrqTVSuqGq_Cw0-i
+X-Proofpoint-Spam-Details-Enc: AW1haW4tMjYwMjA0MDExMCBTYWx0ZWRfXyEIi4k5g8EoK
+ HHTlUFBgu5IfhbZbYrayEoo7EHHqqant3QyRCM7l2I0xihzqOQAZhz7ymOfz9ZFT19gle9hzrqt
+ 5phzkm9yW3va5ipZT05I+G6ecGnxyqK7N2LWHGq9BvkwtGFb04/pbDeFRoT0EwyARsSxSNulFHK
+ +gPKA2zWRGQS4kT+Nz2yLtbbM0hw6H+nWa7o+bCAKZPcjcJrQDOt0YWq3j+F9JN8mAvIKFhiH+j
+ 6ExTGhJoh97K1p0Mtiv/6SeNvXb/8YJ+4Ucr9OGQGh/h43qgh3SW7rQVmP+gADSlGmjQ00zJ6K0
+ 7qFy+XXVYfIGSXg9tD9T5IRqUYVjJhkdGcAH2vC2XbK9t6aY2yIhVlXkJYCKZwDhYZwJ6B59Djm
+ Wfzc+99rOw9wK8Rkpq2brdvaKDc8gfIQ9fwfCSstQAYFLj88pMOCrGfrS02+KYd0fWuObG35zQ6
+ gMwTVR+JpqWaxTOlgA6g0DvnKwhANRkzKPxgIXNYcNza+Xeq8uRxOT2l+2lqq
+X-Proofpoint-SPF-Result: pass
+X-Proofpoint-SPF-Record: v=spf1 include:cust-spf.exacttarget.com -all
+X-Proofpoint-Virus-Version: vendor=baseguard
+ engine=ICAP:2.0.293,Aquarius:18.0.1121,Hydra:6.1.51,FMLib:17.12.100.49
+ definitions=2026-02-04_04,2026-02-04_01,2025-10-01_01
+X-Proofpoint-Spam-Details: rule=inbound_notspam policy=inbound score=0
+ malwarescore=0 impostorscore=0 spamscore=0 suspectscore=0 clxscore=1006
+ lowpriorityscore=0 phishscore=0 priorityscore=1501 adultscore=0 bulkscore=0
+ classifier=clx:Deliver authscore=0 authtc= authcc= route=inbound adjust=0
+ reason=mlx scancount=1 engine=8.22.0-2601150000 definitions=main-2602040110
+ domainage_hfrom=9926
+
+This is a multi-part message in MIME format.
+
+--6q4J9HtEFS2c=_?:
+Content-Type: text/plain;
+	charset="utf-8"
+Content-Transfer-Encoding: 8bit
+
+
+ To view this email as a web page, go to the link below, or copy and paste it into your browser's address window.
+https://cl.s4.exct.net/?qs=eyJkZWtJZCI6ImJiNjM5N2FmLTg3MWEtNDE3Yy04NDI4LTlmMmM5OTc3ZDcyMCIsImRla1ZlcnNpb24iOjEsIml2IjoiUHcyYmltSEM5d3E5aTlLOVNwQ0dtQT09IiwiY2lwaGVyVGV4dCI6ImJFeWNkRWIyVWc2UEF2YXd5aFV6RjBPbUxLMkdOM1BMbndtRWt1NG1CQ0NVUjljM0Q4SVZ4VDlBcENDK2tLOTRUWHdlZlZNUXhid0w5V2hHdjJTd3owVUFQdzJiaW1IQzl3cTlpOUs5U3BDR21BPT0iLCJhdXRoVGFnIjoiSG4xVEVNVzhDL1ZvUnI5a3NNOUZBQT09In0%3D  
+
+
+
+ 
+
+ 
+
+ 
+ 
+
+ Lorem ipsum dolor sit ametLorem ipsum dolor sit amet, consectetur adipiscing elit. Praesent quis nisl in turpis sodales luctus aliquet at quam. Fusce quis enim placerat lectus mattis auctor vel quis mauris. Class aptent taciti sociosqu ad litora torquent per conubia nostra, per inceptos himenaeos. Sed quis suscipit diam, nec lacinia neque. Nunc iaculis non arcu eget volutpat.
+
+https://cl.s4.exct.net/?qs=eyJkZWtJZCI6ImQzNGRmM2I2LWEwNjMtNDY2MC04NzE0LTA0ZmQwNDgxZGJkYyIsImRla1ZlcnNpb24iOjEsIml2IjoiRmxLTS9EYlJoUDNDWDRaL1FTSGdtUT09IiwiY2lwaGVyVGV4dCI6IlZWM3Zsdm8rK2NrK25YWDhKN0YrSjBHNFlzSmtNblN0bE51YVpGWWF3UGJiTjU0aXVPOUU5OEFDWW1aRUJUMmxZMnR5anY4WHpkaDQ4VURGcTB6NE40VlFGbEtNL0RiUmhQM0NYNFovUVNIZ21RPT0iLCJhdXRoVGFnIjoiY283L0Y4M1llUEZBeGF0TStEZUZVQT09In0%3D 
+Go to ESPN.com 
+
+
+
+Lorem ipsum dolor sit amet, consectetur adipiscing elit.
+
+https://cl.s4.exct.net/?qs=eyJkZWtJZCI6ImI2ZTc0MzJlLWYwMjUtNDJmMi1hYzNmLWE0MjM1NjkxNmQ3OCIsImRla1ZlcnNpb24iOjEsIml2IjoidXV4bzBoZkR5RDl5alZjbTVXZlNaZz09IiwiY2lwaGVyVGV4dCI6Im0wT2JFSWRlWSsrUmhzWFZPeWF6U21LMmx6clppWjB2WlMva3lFcTh0ZEtvaThHLys5aXNTcFEzOFpUcXVoMHo5UHphaXRKcHZnelJNUVNpRmtMNnRINlZ1dXhvMGhmRHlEOXlqVmNtNVdmU1pnPT0iLCJhdXRoVGFnIjoiMm9yU2FiNE0wVEVFb2haQytyUitsUT09In0%3D 
+Go to Salesforce 
+
+Lorem ipsum dolor sit amet, consectetur adipiscing elit.
+
+https://cl.s4.exct.net/?qs=eyJkZWtJZCI6ImJkY2UwOTEzLTJkZWItNDIwMC1hMTAzLWI0N2U1OWRiNGIyMyIsImRla1ZlcnNpb24iOjEsIml2IjoiOHJ6RjNuVGpXYnhOYXRGREJiWHNrZz09IiwiY2lwaGVyVGV4dCI6InJkak40NW9QR0E3L1dIb09rMWlFYyt2bUh6Y1lqNy9CZEJWRU85M1d0RVdha3BVM2ExY2g4RGFnWnYvU25TQmxxR3k3c0RiTk9HamFtVUlldzdsT2xEU1g4cnpGM25UaldieE5hdEZEQmJYc2tnPT0iLCJhdXRoVGFnIjoidTdBMnpUaG8ycGxDSHNPNVRwUTBsdz09In0%3D 
+Go to CBSNews 
+
+Lorem ipsum dolor sit amet, consectetur adipiscing elit.
+
+http:// 
+Button Text 
+
+
+
+
+
+ 
+ 
+
+ 
+
+ 
+ 
+
+ 
+http:// 
+LINK    |  
+http:// 
+LINK    |  
+http:// 
+LINK 
+Quo ea modus impedit omittantur. Mel suavitate comceptam et, in vim nihil tibique. Is vis epicuri fierent accusamus, enim liveravisse necessitatibus no eos. 
+
+
+ 
+ 
+
+
+ ----------------------------------------
+	
+	This email was sent by:
+	Salesforce Marketing Cloud
+	20 N Meridian
+	Indianapolis, IN, 46206, USA
+	
+	We respect your right to privacy - visit the following URL to view our policy.
+	( https://cl.s4.exct.net/?qs=eyJkZWtJZCI6Ijc3NWNjNDdhLWJhMTQtNGUxZS1iZTZkLWZiMzEwMjk1YmIyMiIsImRla1ZlcnNpb24iOjEsIml2IjoiTWg4dUZUcE8reWEyZmwxMWoxZWNmQT09IiwiY2lwaGVyVGV4dCI6IjkvalArZDhWcWlUQ20rNFZDdzFXMkxDZFZFSStqblVKZWJjMG5jOU9QdDYvR0o0TWJibWVxaGhIZ1JpbUxUNmhrMWpvcVc3RnRuV21lMDgrbmR3WkpEQmZNaDh1RlRwTyt5YTJmbDExajFlY2ZBPT0iLCJhdXRoVGFnIjoiNktsdXhiWjFwbnRQUHAzY0dTUXdYdz09In0%3D )
+	
+	----------------------------------------
+	
+	Visit the following URL to manage your subscriptions.
+	( https://cl.S4.exct.net/subscription_center.aspx?qs=eyJkZWtJZCI6IjYzNWFjZjRlLTEyNzYtNGFlNy04YjJmLTg2NjcyNWJkMzQxOSIsImRla1ZlcnNpb24iOjEsIml2Ijoid3hnK0xMMFVTSkRnWkxCNTVVbVdwZz09IiwiY2lwaGVyVGV4dCI6IlZQSndndDNsdVlwQk1wbHJtZHcwZEp5Y0hZK2NGakFNeWRCa1B4TGFYM3FkWUVOR2gwcm9hWk4wV1NudXV1OFpsMzhHeFpKT2s0ZUZoU0h0UjdYNm5aUUxoWnl6VDFKQ0llajhFekZmRGNMUXd4ZytMTDBVU0pEZ1pMQjU1VW1XcGc9PSIsImF1dGhUYWciOiJDNFdjczA5U1FpSG8vQk14WHczQzBBPT0ifQ%3D%3D )
+	
+	Visit the following URL to update your profile.
+	( https://cl.S4.exct.net/profile_center.aspx?qs=eyJkZWtJZCI6ImI3ZWIyMGQzLTFkM2QtNDEyNS05ZjFjLTI0Mzg0ZDE4MTg2ZSIsImRla1ZlcnNpb24iOjEsIml2IjoiSnIrZEdITngrN1pKVk9TMXBHbDc3dz09IiwiY2lwaGVyVGV4dCI6Ik9oTi9sUUQyd211d2kxNHkybDFvaTVEWURtaUUwYkxlUFB3SUQrczlIRERHc2FlU0pyN3B6MXdiandDTXhaTEpWQVVyYkQrTERZSjEvOGxnWSttNU1kUnB2Qno5MkZpcUFWaWVEcG5iTmJOZkpyK2RHSE54KzdaSlZPUzFwR2w3N3c9PSIsImF1dGhUYWciOiJhYndjL2RoWXFnRlluZzZaMnpXelh3PT0ifQ%3D%3D )
+	
+	Visit the following URL to unsubscribe.
+	( https://cl.S4.exct.net/unsub_center.aspx?qs=eyJkZWtJZCI6IjkyZTI0NGZmLWIxYmQtNGE3Yy1hNDFhLTc5OTNiMWRlYjdmNiIsImRla1ZlcnNpb24iOjEsIml2IjoiNU9UWTk3T2FIVlJ4TlJNY01HMkdpQT09IiwiY2lwaGVyVGV4dCI6IjBUd1ErWXV5em01SnN4YmhpN3FhTm04eGJpVE9QSFRiajNDV0M4MFdtYnUxbXBZcGVKYXRqSGlkQ3A0MDlQc0FsT3hTUmJaKzZuMmVHaSttUEhGTHdIQm9zNnNsdzlvYlZIZ1YyUWgzN0NhQzlNSGs1TmozczVvZFZIRTFFeHd3YllhSSIsImF1dGhUYWciOiJxeVhEMmh0VWVCWFpDSGZzSm9MMHdRPT0ifQ%3D%3D )
+	
+ 
+
+
+--6q4J9HtEFS2c=_?:
+Content-Type: text/html;
+	charset="utf-8"
+Content-Transfer-Encoding: 8bit
+
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+  <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <style type="text/css">
+      ReadMsgBody{ width: 100%;}
+      .ExternalClass {width: 100%;}
+      .ExternalClass, .ExternalClass p, .ExternalClass span, .ExternalClass font, .ExternalClass td, .ExternalClass div {line-height: 100%;}
+      body {-webkit-text-size-adjust:100%; -ms-text-size-adjust:100%;margin:0 !important;}
+      p { margin: 1em 0;}
+      table td { border-collapse: collapse;}
+      img {outline:0;}
+      a img {border:none;}
+      @-ms-viewport{ width: device-width;}
+    </style>
+    <style type="text/css">
+      @media only screen and (max-width: 480px) {
+        .container {width: 100% !important;}
+        .footer { width:auto !important; margin-left:0; }
+        .mobile-hidden { display:none !important; }
+        .logo { display:block !important; padding:0 !important; }
+        img { max-width:100% !important; height:auto !important; max-height:auto !important;}
+        .header img{max-width:100% !important;height:auto !important; max-height:auto !important;}
+        .photo img { width:100% !important; max-width:100% !important; height:auto !important;}
+        .drop { display:block !important; width: 100% !important; float:left; clear:both;}
+        .footerlogo { display:block !important; width: 100% !important; padding-top:15px; float:left; clear:both;}
+        .nav4, .nav5, .nav6 { display: none !important; }
+        .tableBlock {width:100% !important;}
+        .responsive-td {width:100% !important; display:block !important; padding:0 !important; }
+        .fluid, .fluid-centered {
+          width: 100% !important;
+          max-width: 100% !important;
+          height: auto !important;
+          margin-left: auto !important;
+          margin-right: auto !important;
+        }
+        .fluid-centered {
+          margin-left: auto !important;
+          margin-right: auto !important;
+        }
+        /* MOBILE GLOBAL STYLES - DO NOT CHANGE */
+        body { padding: 0px !important; font-size: 16px !important; line-height: 150% !important;}
+        h1 { font-size: 22px !important; line-height: normal !important;}
+        h2 { font-size: 20px !important; line-height: normal !important;}
+        h3 { font-size: 18px !important; line-height: normal !important;}
+        .buttonstyles {
+          font-family:arial,helvetica,sans-serif !important;
+          font-size: 16px !important;
+          color: #FFFFFF !important;
+          padding: 10px !important;
+        }
+        /* END OF MOBILE GLOBAL STYLES - DO NOT CHANGE */
+      }
+      @media only screen and (max-width: 640px) {
+        .container { width:100% !important; }
+        .mobile-hidden { display:none !important; }
+        .logo { display:block !important; padding:0 !important; }
+        .photo img { width:100% !important; height:auto !important;}
+        .nav5, .nav6 { display: none !important;}
+        .fluid, .fluid-centered {
+          width: 100% !important;
+          max-width: 100% !important;
+          height: auto !important;
+          margin-left: auto !important;
+          margin-right: auto !important;
+        }
+        .fluid-centered {
+          margin-left: auto !important;
+          margin-right: auto !important;
+        }
+      }
+    </style>
+    <!--[if mso]>       <style type="text/css">           /* Begin Outlook Font Fix */           body, table, td {               font-family: Arial, Helvetica, sans-serif ;               font-size:16px;               color:#181818;               line-height:1;           }           /* End Outlook Font Fix */       </style>     <![endif]-->
+  </head>
+  <body bgcolor="#efefef" text="#181818" style="background-color: #efefef; color: #181818; margin: 0px; padding: 20px; -webkit-text-size-adjust:none; line-height: normal; font-size: 16px; font-family:arial,helvetica,sans-serif;">
+    <div style="font-size:0; line-height:0;"><img src="https://cl.S4.exct.net/open.aspx?5TJVRF3ZLY2UXEO64A3ZFCKWNU.40152&bmt=0" width="1" height="1" alt=""></div>
+    <table width="100%" border="0" cellpadding="0" cellspacing="0" align="center">
+      <tr>
+        <td align="center" valign="top">
+          <div style="margin:18px 0;"><!--   To view this email as a web page, click on the link below,  or copy and paste it into your browser's address window.  https://view.S4.exacttarget.com/?vawpToken=P67YOBGCSNTERMOEIIVYHEX2SA.40152  .//-->
+<font face="verdana" size="1" color="#444444">To view this email as a web page, go <a href="https://cl.s4.exct.net/?qs=eyJkZWtJZCI6IjI1MGY4ZTBjLTgwMjYtNGZhMi05MmQ3LTUwODk2YzU4ZGU4NyIsImRla1ZlcnNpb24iOjEsIml2IjoiWFVyV28xY3RXVi83M3RuZ3hGMUtqUT09IiwiY2lwaGVyVGV4dCI6ImJEdFVNVlRzNjZWR1dKMFFHMnFxeHNHc015b3dVWHJrM01KVnlIS3RtZVBrcnpKTG1MNStvTm1ZNVE2b25pN3NSTElhaGRSVG5DcjVCUS9tVWw2SEZHZm9YVXJXbzFjdFdWLzczdG5neEYxS2pRPT0iLCJhdXRoVGFnIjoiR29YVVU1d3ErUVVQNWxKZWh4Um42QT09In0%3D" >here.</a></font></div>
+        </td>
+      </tr>
+      <tr>
+        <td align="center">
+          <table cellspacing="0" cellpadding="0" border="0" width="600" class="container" align="center">
+            <tr>
+              <td>
+                <table class="tb_properties border_style" cellspacing="0" cellpadding="0" bgcolor="#ffffff" width="100%">
+                  <tr>
+                    <td align="center" valign="top">
+                      <table align="left" border="0" cellpadding="0" cellspacing="0" width="100%">
+                        <tr>
+                          <td class="content_padding" style="padding:10px;border:0px;">
+                            <table border="0" cellpadding="0" cellspacing="0" width="100%">
+                              <tr>
+                                <td align="left" class="header" valign="top" role="banner" aria-label="header">
+                                  <table cellpadding="0" cellspacing="0" width="100%" role="presentation" style="border-bottom: 1px solid #AEAEAE; min-width: 100%; " class="slot-styling"><tr><td style="padding: 0px 0px 20px; " class="slot-styling camarker-inner"><table cellpadding="0" cellspacing="0" width="100%" role="presentation" style="text-align: center; min-width: 100%; " class="stylingblock-content-wrapper"><tr><td style="padding-top: 10px; " class="stylingblock-content-wrapper camarker-inner" align="center"><img alt="Placeholder image" src="https://image.s4.exct.net/lib/fe911573736c007d7d/m/2/f3bcb75d-176b-4412-83f3-e70dc1c591c8.png" style="height:80px;width:200px;display: block;text-align: center;" height="80" width="200"></td></tr></table></td></tr></table>
+                                  
+                                </td>
+                              </tr>
+                              <tr>
+                                <td align="left" class="" valign="top" role="article" aria-label="article">
+                                  <table cellpadding="0" cellspacing="0" width="100%" role="presentation" style="border-bottom: 1px solid #AEAEAE; min-width: 100%; " class="slot-styling"><tr><td style="padding-top: 10px; padding-bottom: 10px; " class="slot-styling camarker-inner"><table cellpadding="0" cellspacing="0" width="100%" role="presentation" style="min-width: 100%; " class="stylingblock-content-wrapper"><tr><td style="padding-top: 10px; padding-right: 10px; padding-left: 10px; " class="stylingblock-content-wrapper camarker-inner"><table style="width: 100%;" cellpadding="0" cellspacing="0"><tr><td><table style="width: 100%;" cellpadding="0" cellspacing="0"><tr><td class="responsive-td" style="width: 100%;" valign="top"><table cellpadding="0" cellspacing="0" width="100%" role="presentation" style="min-width: 100%; " class="stylingblock-content-wrapper"><tr><td class="stylingblock-content-wrapper camarker-inner">
+<h1 style="text-align: center; font-family : Arial,helvetica,sans-serif; font-size : 28px; color : #181818; line-height : 1; font-weight : bold; font-style : normal; ">Lorem ipsum dolor sit amet</h1>
+
+<div style="text-align: center;">Lorem ipsum dolor sit amet, consectetur adipiscing elit. Praesent quis nisl in turpis sodales luctus aliquet at quam. Fusce quis enim placerat lectus mattis auctor vel quis mauris. Class aptent taciti sociosqu ad litora torquent per conubia nostra, per inceptos himenaeos. Sed quis suscipit diam, nec lacinia neque. Nunc iaculis non arcu eget volutpat.</div>
+</td></tr></table><table cellpadding="0" cellspacing="0" width="100%" role="presentation" style="min-width: 100%; " class="stylingblock-content-wrapper"><tr><td style="padding-top: 20px; padding-bottom: 20px; " class="stylingblock-content-wrapper camarker-inner"><table width="100%" border="0" cellspacing="0" cellpadding="5" role="presentation"><tr><td align="center"><table border="0" cellspacing="0" cellpadding="0" role="presentation"><tr><td class="innertd buttonblock" align="center" bgcolor="#5D5D5D" style=" border-radius: 3px; -moz-border-radius: 3px; -webkit-border-radius: 3px; background-color: #5D5D5D;">
+<a target="_blank" style=" text-decoration: none; display: block; font-family: Arial, Helvetica, sans-serif; font-size: 16px; color: #FFFFFF; text-align: center; background-color: #5D5D5D; border: 1px solid #5D5D5D; padding: 10px; border-radius: 3px; -moz-border-radius: 3px; -webkit-border-radius: 3px;" class="buttonstyles" href="https://cl.s4.exct.net/?qs=eyJkZWtJZCI6IjVlMjE3MGNkLTBlYzAtNDBkOC05YjdlLTRhYjA0MzczYTczMSIsImRla1ZlcnNpb24iOjEsIml2IjoiRnNTMnBsa1RiRlc1RGNQY2g3S0VUdz09IiwiY2lwaGVyVGV4dCI6ImVSMGFSZ09KdGV4VnNCL1pyVHBwNGh5U1IxdDFxWFNvbmxybGZhSW1LWm53ckdrNVNtUXhFWmxhaitNVGh3QThFK1ZzTDJPM2syK21nVEN2UDhkZVV6dCt4Nm9hd3dvV3hMYW1XUk5zVmJrTnc5eUhzb1JQIiwiYXV0aFRhZyI6ImI2YUJNSzgveDE1VE8zN0hxaHJEQ2c9PSJ9" title="Go to ESPN"   data-linkto="https://">Go to ESPN.com</a></td></tr></table></td></tr></table></td></tr></table></td></tr></table></td></tr></table></td></tr></table>
+<table cellpadding="0" cellspacing="0" width="100%" role="presentation" style="text-align: left; min-width: 100%; " class="stylingblock-content-wrapper"><tr><td style="padding-top: 10px; padding-right: 10px; padding-left: 10px; " class="stylingblock-content-wrapper camarker-inner" align="left"><table style="width: 100%;" cellpadding="0" cellspacing="0"><tr><td><table style="width: 100%;" cellpadding="0" cellspacing="0"><tr><td class="responsive-td" style="width: 33%; padding-right: 5px;" valign="top"><table cellpadding="0" cellspacing="0" width="100%" role="presentation" style="min-width: 100%; " class="stylingblock-content-wrapper"><tr><td style="padding-bottom: 10px; " class="stylingblock-content-wrapper camarker-inner"><img alt="Placeholder image" src="https://image.s4.exct.net/lib/fe911573736c007d7d/m/2/ca503367-ab86-4e0d-8130-faecddb9e4d8.png" height="120" width="180" style="height:120px;width:180px;display: block;text-align: center;"></td></tr></table>
+<table cellpadding="0" cellspacing="0" width="100%" role="presentation" style="min-width: 100%; " class="stylingblock-content-wrapper"><tr><td style="padding-bottom: 10px; " class="stylingblock-content-wrapper camarker-inner"><div style="text-align: center;">Lorem ipsum dolor sit amet, consectetur adipiscing elit.</div></td></tr></table><table cellpadding="0" cellspacing="0" width="100%" role="presentation" style="min-width: 100%; " class="stylingblock-content-wrapper"><tr><td style="padding-bottom: 10px; " class="stylingblock-content-wrapper camarker-inner"><table width="100%" border="0" cellspacing="0" cellpadding="5" role="presentation"><tr><td align="center"><table border="0" cellspacing="0" cellpadding="0" role="presentation"><tr><td class="innertd buttonblock" align="center" bgcolor="#5D5D5D" style=" border-radius: 3px; -moz-border-radius: 3px; -webkit-border-radius: 3px; background-color: #5D5D5D;">
+<a target="_blank" style=" text-decoration: none; display: block; font-family: Arial, Helvetica, sans-serif; font-size: 16px; color: #FFFFFF; text-align: center; background-color: #5D5D5D; border: 1px solid #5D5D5D; padding: 10px; border-radius: 3px; -moz-border-radius: 3px; -webkit-border-radius: 3px;" class="buttonstyles" href="https://cl.s4.exct.net/?qs=eyJkZWtJZCI6IjY5YTQ0ZDliLTZlMWQtNGIyYy04MmU0LTgwMDJjYWNlODk4YSIsImRla1ZlcnNpb24iOjEsIml2IjoidzV1eU5EMWJKc3dZeU51S1cxcEdtQT09IiwiY2lwaGVyVGV4dCI6InhHdmhGclpGdzRwRWE2ME1zVkRHNWY2K0p0U0ZvR2R2L0FGdlN6N09WNEVZdjY0Tk1UT0l3U3VZQkVwcVBXSjdRaGRHaC81OWtFMFhxNG1ENGFGSUE2U2o2bGVsbUQ3RG03STBQVnNtekJqSTI0cGJXa2FZIiwiYXV0aFRhZyI6IlRSZXJpWVBob1VnRHBLUHFWNldZUGc9PSJ9" title="Salesforce.com"   data-linkto="http://">Go to Salesforce</a></td></tr></table></td></tr></table></td></tr></table></td>
+<td class="responsive-td" style="width: 33%; padding-right: 5px; padding-left: 5px;" valign="top"><table cellpadding="0" cellspacing="0" width="100%" role="presentation" style="min-width: 100%; " class="stylingblock-content-wrapper"><tr><td style="padding-bottom: 10px; " class="stylingblock-content-wrapper camarker-inner"><img alt="Placeholder image" src="https://image.s4.exct.net/lib/fe911573736c007d7d/m/2/ca503367-ab86-4e0d-8130-faecddb9e4d8.png" height="120" width="180" style="height:120px;width:180px;display: block;text-align: center;"></td></tr></table><table cellpadding="0" cellspacing="0" width="100%" role="presentation" style="min-width: 100%; " class="stylingblock-content-wrapper"><tr><td style="padding-bottom: 10px; " class="stylingblock-content-wrapper camarker-inner"><div style="text-align: center;">Lorem ipsum dolor sit amet, consectetur adipiscing elit.</div></td></tr></table>
+<table cellpadding="0" cellspacing="0" width="100%" role="presentation" style="min-width: 100%; " class="stylingblock-content-wrapper"><tr><td style="padding-bottom: 10px; " class="stylingblock-content-wrapper camarker-inner"><table width="100%" border="0" cellspacing="0" cellpadding="5" role="presentation"><tr><td align="center"><table border="0" cellspacing="0" cellpadding="0" role="presentation"><tr><td class="innertd buttonblock" align="center" bgcolor="#5D5D5D" style=" border-radius: 3px; -moz-border-radius: 3px; -webkit-border-radius: 3px; background-color: #5D5D5D;">
+<a target="_blank" style=" text-decoration: none; display: block; font-family: Arial, Helvetica, sans-serif; font-size: 16px; color: #FFFFFF; text-align: center; background-color: #5D5D5D; border: 1px solid #5D5D5D; padding: 10px; border-radius: 3px; -moz-border-radius: 3px; -webkit-border-radius: 3px;" class="buttonstyles" href="https://cl.s4.exct.net/?qs=eyJkZWtJZCI6IjMwOGRmZTU3LTdlNjEtNGViMS05NmM4LTI4YzgwNzc3NjVmZCIsImRla1ZlcnNpb24iOjEsIml2IjoiTFpLdmlFakRVZXAwaHU1MjFLNFkzUT09IiwiY2lwaGVyVGV4dCI6ImZCUDZCeTJMSkt3TFVkT2Q3SHZvY3pWd0Fqa1Z3L3c3T3ZxZy9LMElVT1FIUkxJdGpVYXF4SmpxTnZ4c0diL3hRYUxON3IvTEdxSFNDZWhmdEtxTTZWWnFMWkt2aUVqRFVlcDBodTUyMUs0WTNRPT0iLCJhdXRoVGFnIjoiemU2L3l4cWgwZ25vWDdTcWpPbFdhZz09In0%3D" title=""   data-linkto="http://">Go to CBSNews</a></td></tr></table></td></tr></table></td></tr></table></td>
+<td class="responsive-td" style="width: 34%; padding-left: 5px;" valign="top"><table cellpadding="0" cellspacing="0" width="100%" role="presentation" style="min-width: 100%; " class="stylingblock-content-wrapper"><tr><td style="padding-bottom: 10px; " class="stylingblock-content-wrapper camarker-inner"><img alt="Placeholder image" src="https://image.s4.exct.net/lib/fe911573736c007d7d/m/2/ca503367-ab86-4e0d-8130-faecddb9e4d8.png" style="height:120px;width:180px;display: block;text-align: center;" height="120" width="180"></td></tr></table><table cellpadding="0" cellspacing="0" width="100%" role="presentation" style="min-width: 100%; " class="stylingblock-content-wrapper"><tr><td style="padding-bottom: 10px; " class="stylingblock-content-wrapper camarker-inner"><div style="text-align: center;">Lorem ipsum dolor sit amet, consectetur adipiscing elit.</div></td></tr></table>
+<table cellpadding="0" cellspacing="0" width="100%" role="presentation" style="min-width: 100%; " class="stylingblock-content-wrapper"><tr><td style="padding-bottom: 10px; " class="stylingblock-content-wrapper camarker-inner"><table width="100%" border="0" cellspacing="0" cellpadding="5"><tr><td align="center"><table border="0" cellspacing="0" cellpadding="0"><tr><td class="innertd buttonblock" align="center" bgcolor="#5D5D5D" style="border-radius: 3px; -moz-border-radius: 3px; -webkit-border-radius: 3px;">
+<a target="_blank" style="text-decoration: none; display: block; background-color: #5D5D5D; border: 1px solid #5D5D5D; font-family: Arial, Helvetica, sans-serif; font-size: 16px; color: #FFFFFF; padding: 10px; border-radius: 3px; -moz-border-radius: 3px; -webkit-border-radius: 3px;" class="buttonstyles" href="https://cl.s4.exct.net/?qs=eyJkZWtJZCI6IjRkY2EzOTU2LWYzZGUtNGE0ZC1hZjI3LTY1ZmViM2Q3MmY0NyIsImRla1ZlcnNpb24iOjEsIml2IjoiTjNsTXA2Q2EzcDBkUW5YKzUxNTA3UT09IiwiY2lwaGVyVGV4dCI6IjE0eXhEYnhuYTFwb2RrbFBGb2ErNkZpZDBmeDJMTTk3L1hhQ1EwMFhqTy9HejY2YnZneTF0SW5hQWVsL3ZTMVRoOE54SUhmOHppcTExT3pYNnhWSUVuU1pOM2xNcDZDYTNwMGRRblgrNTE1MDdRPT0iLCJhdXRoVGFnIjoiY1NCMy9NNHF0ZFRzMStzVlNCSjBtUT09In0%3D" title=""  >Button Text</a></td></tr></table></td></tr></table></td></tr></table></td></tr></table></td></tr></table></td></tr></table><table cellpadding="0" cellspacing="0" width="100%" role="presentation" style="min-width: 100%; " class="stylingblock-content-wrapper"><tr>
+<td style="padding-top: 10px; padding-bottom: 10px; " class="stylingblock-content-wrapper camarker-inner"><img alt="Placeholder image" src="https://image.s4.exct.net/lib/fe911573736c007d7d/m/2/f3bcb75d-176b-4412-83f3-e70dc1c591c8.png" height="" width="" style="display: block;"></td></tr></table></td></tr></table>
+                                  
+                                </td>
+                              </tr>
+                              <tr>
+                                <td align="left" class="" valign="top" role="article" aria-label="social">
+                                  <table cellpadding="0" cellspacing="0" width="100%" role="presentation" style="border-bottom: 1px solid #AEAEAE; min-width: 100%; " class="slot-styling"><tr><td style="padding-top: 10px; padding-bottom: 10px; " class="slot-styling camarker-inner"><table cellpadding="0" cellspacing="0" width="100%" role="presentation" style="text-align: left; min-width: 100%; " class="stylingblock-content-wrapper"><tr><td class="stylingblock-content-wrapper camarker-inner" align="left"><table class="socialshare-wrapper" cellpadding="0" cellspacing="0" width="100%"><tr> <td><table align="center" cellpadding="0" cellspacing="0"><tr><td align="center"><!--[if mso]><table border="0" cellspacing="0" cellpadding="0"><tr><td style="padding-right:10px;"><![endif]--><table class="socialshare-innertable" style="display: inline-block"><tr><td style="padding:5px 10px"><a href="" alias="facebook follow">
+<img src="https://image.exct.net/lib/fe5f15707267027a7712/m/1/socialshare-facebook-grey-2x.png" width="24" height="24" alt="Facebook" style="display: block;; width: 24px !important; height: 24px !important"></a></td></tr></table><!--[if mso]></td><td style="padding-right:10px;"><![endif]--><table class="socialshare-innertable" style="display: inline-block"><tr><td style="padding:5px 10px"><a href="" alias="twitter follow"><img src="https://image.exct.net/lib/fe5f15707267027a7712/m/1/socialshare-x-grey-2x.png" width="24" height="24" alt="X" style="display: block;; width: 24px !important; height: 24px !important"></a></td></tr></table><!--[if mso]></td><td style="padding-right:10px;">
+<![endif]--><table class="socialshare-innertable" style="display: inline-block"><tr><td style="padding:5px 10px"><a href="" alias="pinterest follow"><img src="https://image.exct.net/lib/fe5f15707267027a7712/m/1/socialshare-pinterest-grey-2x.png" width="24" height="24" alt="Pinterest" style="display: block;; width: 24px !important; height: 24px !important"></a></td></tr></table><!--[if mso]></td><td><![endif]--><table class="socialshare-innertable" style="display: inline-block"><tr><td style="padding:5px 10px"><a href="" alias="instagram follow">
+<img src="https://image.exct.net/lib/fe5f15707267027a7712/m/1/socialshare-instagram-grey-2x.png" width="24" height="24" alt="Instagram" style="display: block;; width: 24px !important; height: 24px !important"></a></td></tr></table><!--[if mso]></td></tr></table><![endif]--></td></tr></table></td></tr></table></td></tr></table></td></tr></table>
+                                  
+                                </td>
+                              </tr>
+                              <tr>
+                                <td align="left" class="" valign="top" role="contentinfo" aria-label="footer">
+                                  <table cellpadding="0" cellspacing="0" width="100%" role="presentation" style="min-width: 100%; " class="slot-styling"><tr><td style="padding-top: 20px; " class="slot-styling camarker-inner"><table cellpadding="0" cellspacing="0" width="100%" role="presentation" style="text-align: center; min-width: 100%; " class="stylingblock-content-wrapper"><tr><td class="stylingblock-content-wrapper camarker-inner" align="center"><div style="text-align: center;"><a   href="https://cl.s4.exct.net/?qs=eyJkZWtJZCI6ImVkMDZjYjNiLThiMDItNDMwYi05YTBhLTQ1OTI3ZjhmNDkwNSIsImRla1ZlcnNpb24iOjEsIml2IjoiMWIzM1hRbHVkY1VPcW9VNjAzemdIQT09IiwiY2lwaGVyVGV4dCI6InREa1AxMTZHVklZdFI1OFNlS3ZoaURtMVdTUzVFblN3OVA5eFNaQUJJVGRadEs3MXczaHM5RUQyWXovZ2lGUDRpN3N2eHpLSTBsS0VsRWs1UlFRWEhCNmwxYjMzWFFsdWRjVU9xb1U2MDN6Z0hBPT0iLCJhdXRoVGFnIjoiTDhjeWlOSlNoSlJKT1VVRUZ4d2VwUT09In0%3D" style="color:#181818;text-decoration:none;" title="">LINK</a>&nbsp;&nbsp; |&nbsp;&nbsp;
+<a   href="https://cl.s4.exct.net/?qs=eyJkZWtJZCI6IjRiNDRjNGJjLTE4NzEtNDIzNC1iNGQ5LWU2YmI1MjEyNzkzZCIsImRla1ZlcnNpb24iOjEsIml2IjoicTV1WHpzc09nSUkzUmMxRzdvTW1KZz09IiwiY2lwaGVyVGV4dCI6IlVEbExWdzRrdHptNTNaZ2NqTlJodGpuaGNXMHI2aU1XZnllVlAwNDNKdkZGOERYQ0krOWJjTU9UNXRtQ0xNMnFwSUpJa2p3c2VRNmdLQ3BreEZJbW5EUzBxNXVYenNzT2dJSTNSYzFHN29NbUpnPT0iLCJhdXRoVGFnIjoiU0pJOExIa09vQ2dxWk1SU0pwdzB0QT09In0%3D" style="color:#181818;text-decoration:none;" title="">LINK</a>&nbsp;&nbsp; |&nbsp;&nbsp;<a   href="https://cl.s4.exct.net/?qs=eyJkZWtJZCI6IjMzYzM2YWFjLTE3N2MtNDU0ZC1iNWE1LTI0NGE2MWVhYThiMiIsImRla1ZlcnNpb24iOjEsIml2IjoiakRLdU96ZFJYeVRleS9BL1QvZmlOdz09IiwiY2lwaGVyVGV4dCI6IjBGNStJSWxJM3Q4OG9PVEhrSjh1cWRvRjVhN05VT2d2VEQzTkQ1RUFNSTZ6UzZpUUZKSkNUL2tGWUp1bi9uM01rZERvUVRCby8rT0NCR1ZRUXg1Zm5aQkNqREt1T3pkUlh5VGV5L0EvVC9maU53PT0iLCJhdXRoVGFnIjoiNkVFd2FQL2pnZ1JsVUVNZVg1MlFRZz09In0%3D" style="color:#181818;text-decoration:none;" title="">LINK</a>
+</div></td></tr></table><table cellpadding="0" cellspacing="0" width="100%" role="presentation" style="min-width: 100%; " class="stylingblock-content-wrapper"><tr><td style="padding-top: 10px; padding-right: 10px; padding-left: 10px; " class="stylingblock-content-wrapper camarker-inner"><div style="text-align: center;"><span style="font-size:12px;">Quo ea modus impedit omittantur. Mel suavitate comceptam et, in vim nihil tibique. Is vis epicuri fierent accusamus, enim liveravisse necessitatibus no eos. </span></div>
+</td></tr></table></td></tr></table>
+                                  
+                                </td>
+                              </tr>
+                            </table>
+                          </td>
+                        </tr>
+                      </table>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+      <tr>
+        <td valign="top">
+          <table cellpadding="0" cellspacing="0" align="center" class="footer" width="600">   <tbody>    <tr>     <td style="padding-top:15px;">      <table class="tableBlock" align="left" width="430" cellpadding="0" cellspacing="0" border="0">       <tr>        <td align="left" style="padding-left:15px;">         <font face="verdana" size="1" color="#777777">This email was sent to:  <b>bob.ullery@salesforce.com</b></font>        </td>       </tr>       <tr>        <td align="left" style="padding-top:15px; padding-left:15px;">         <font face="verdana" size="1" color="#777777">This email was sent by: Salesforce Marketing Cloud<br>         20 N Meridian Indianapolis, IN 46206 USA</font>        
+</td>       </tr>       <tr>        <td align="left" style="padding-top:15px; padding-left:15px;"><font face="verdana" size="1" color="#777777">We respect your right to privacy - <a href="https://cl.s4.exct.net/?qs=eyJkZWtJZCI6IjQ0YzExZjY5LTkwNDMtNDUxNi1hMGY3LTc5MmJjZTljYzQ2NSIsImRla1ZlcnNpb24iOjEsIml2IjoibjJOZjMxVjFQL2Y0SkpGUzNTNHZOUT09IiwiY2lwaGVyVGV4dCI6Ik8vdlpvT3l3OTVhUnVMbEM4MUVvTG5yVHVhSUdIWEUxaEUxdFFabDIyV3NvRUFYYmJhOWtrbFRQZ1lNQlBhQUJWb1ZWQVFUMnprYjJWOWRxU2VIVTd1WVpuMk5mMzFWMVAvZjRKSkZTM1M0dk5RPT0iLCJhdXRoVGFnIjoiVlFFRTlzNUc5bGZYYWtuaDFPN21HUT09In0%3D"  style="color: #0000ff">view our policy</a></font></td>       </tr>      </table>     <!--[if mso]></td><td valign="top"><![endif]-->      <table class="tableBlock" align="left" width="139" cellpadding="0" cellspacing="0" border="0">       <tr>        <td class="footerlogo">         <div style="padding-left: 15px; padding-right: 20px;">          
+<a href="https://cl.s4.exct.net/?qs=eyJkZWtJZCI6IjY0ODllY2M3LWI4OTAtNGFhYi04MWZjLWJkMWVhMzgyYTI3ZiIsImRla1ZlcnNpb24iOjEsIml2IjoiUHU4Y3kvZnh1R3p2bkV6YlNMWjExUT09IiwiY2lwaGVyVGV4dCI6IkJ5NWpsMjNiMEwvVVgzMUxLRWMxb25qQjBIK1pUeko1MFlDZS9TTTRBUEhvVVVCRUtidWxWUk9KWk1JcG9ZZ0htUnBURGtQdXdkVFM0SHU4N2J0OFg1bERQdThjeS9meHVHenZuRXpiU0xaMTFRPT0iLCJhdXRoVGFnIjoiVXc1RDdzSFUwdUI3dk8yN2ZGK1pRdz09In0%3D">          
+<img src="https://www.exacttarget.com/images/Powered_By_1206.jpg" border="0"></a>         </div>        </td>       </tr>       </table>     </td>    </tr>    <tr>     <td colspan="2" align="center" style="padding-bottom:10px;">      <font face="verdana" size="1" color="#777777"><br>       <a href="https://cl.S4.exct.net/subscription_center.aspx?qs=eyJkZWtJZCI6IjNlZjhkNWEwLTE2MTAtNGE1OC04MDA1LTRhYzQxODRlMzMxOSIsImRla1ZlcnNpb24iOjEsIml2Ijoiam1yaTRKRTdldHE0R21EWlFPVlpEdz09IiwiY2lwaGVyVGV4dCI6IlZpS3IwVXFLMjIwNGJ4UEZzQlJ2S2hUUm14QkY5RHdMZFdEY2ozTjFJZHpaUjV6YTFJQ2NrM0pma2MzRzZ5S1pMTHIzQWRnbEVBUFJEQURuYWNmNDRqSm45RmZEWEFyVGFDTUUrZW5sYmN1cmptcmk0SkU3ZXRxNEdtRFpRT1ZaRHc9PSIsImF1dGhUYWciOiJaL1JYdzF3SzAyZ2pCUG5wNVczTHF3PT0ifQ%3D%3D" >Manage Subscriptions</a> | 
+<a href="https://cl.S4.exct.net/profile_center.aspx?qs=eyJkZWtJZCI6IjQ0OTI4Y2I3LWJmY2EtNDgyNy1iZTY0LWI2NTFiNzRhNzg2YyIsImRla1ZlcnNpb24iOjEsIml2IjoiWjZ1NWt1YklYZ1hNMWFqSENIK0FMdz09IiwiY2lwaGVyVGV4dCI6Ikd6YjI5T2o1RjJuOXhCUlN2SEsrbEJNOUovcnBkQzh0NGx6OVFxYVkwVFRtYnJzR1oyRGF6V2xGQ2NRTXZ1WWYrajJieC9UM3dTVU13dXpTUHk1OVNTekNneWRGKytpeEVLMlZSa2NPZHRzWlo2dTVrdWJJWGdYTTFhakhDSCtBTHc9PSIsImF1dGhUYWciOiJ3b01uUmZ2b3NSQ3RsVVpIRG5iYkdRPT0ifQ%3D%3D" >Update Profile</a> | <a href="https://cl.S4.exct.net/unsub_center.aspx?qs=eyJkZWtJZCI6Ijk4NDllYzMzLWNmM2UtNDc2My04ZTQ0LTBjMDZjZGIyNWZkZCIsImRla1ZlcnNpb24iOjEsIml2IjoicHZ2enBBNG9KUHBrVXNRbDhBOFNPZz09IiwiY2lwaGVyVGV4dCI6IkRZQ0lUUXlxUk9XR0FiUTVuM1BBWU1kbFN0YUUyTEw2dWdLQVFtZWVSa21QMjFDNEtCS1pwY3FFZWt2cGlmM2psZFVYY2dkUDJJNGZjcVpNdGFYSmFxb3NlVG5PSTBLTjFZdmE3SUU1VGlIUjB5V20rL09rRGlnayttUlN4Q1h3RHhJNiIsImF1dGhUYWciOiJPYzRqUW8zVmk5cnNnVGxPSWRIVEpRPT0ifQ%3D%3D" >Unsubscribe</a><br><br>      </font>     </td>    </tr>   </tbody>  </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>
+
+--6q4J9HtEFS2c=_?:--
+

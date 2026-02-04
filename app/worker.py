@@ -91,14 +91,22 @@ def process_mail(job: Dict[str, Any]) -> Dict[str, Any]:
 
     opened = False
     open_roll = random.random()
+    will_attempt_open = open_roll < settings.simulate_open_probability
+    
     logger.info("worker_open_roll", extra={
         "message_id": message_id,
         "roll": open_roll,
         "threshold": settings.simulate_open_probability,
-        "will_attempt_open": open_roll < settings.simulate_open_probability,
+        "threshold_type": type(settings.simulate_open_probability).__name__,
+        "will_attempt_open": will_attempt_open,
+        "comparison": f"{open_roll} < {settings.simulate_open_probability} = {will_attempt_open}",
     })
     
-    if open_roll < settings.simulate_open_probability:
+    if will_attempt_open:
+        logger.info("worker_open_attempt_starting", extra={
+            "message_id": message_id,
+            "reason": "probability_check_passed",
+        })
         # Log HTML content before parsing
         logger.info("worker_html_before_parsing", extra={
             "message_id": message_id,
@@ -127,15 +135,39 @@ def process_mail(job: Dict[str, Any]) -> Dict[str, Any]:
                 "html_preview": html[:200] if html else None,
             })
         
+        # Initialize pixel_result before use
+        pixel_result = None
         if special_pixel:
+            logger.info("worker_pixel_fetch_starting", extra={
+                "message_id": message_id,
+                "url": special_pixel,
+                "url_length": len(special_pixel),
+            })
             pixel_result = fetch_single_url(special_pixel, headers, timeout_seconds)
             logger.info("worker_pixel_fetch", extra={
                 "message_id": message_id,
-                "url": special_pixel[:100],
+                "url": special_pixel,
+                "url_truncated": special_pixel[:100],
                 "success": pixel_result,
+                "will_set_opened": pixel_result is True,
             })
             if pixel_result:
                 opened = True
+                logger.info("worker_pixel_fetch_success_set_opened", extra={
+                    "message_id": message_id,
+                    "opened": opened,
+                })
+            else:
+                logger.warning("worker_pixel_fetch_failed", extra={
+                    "message_id": message_id,
+                    "url": special_pixel,
+                    "opened_remains": opened,
+                })
+        else:
+            logger.info("worker_no_special_pixel", extra={
+                "message_id": message_id,
+                "reason": "special_pixel_not_found_in_html",
+            })
         
         if special_pixel and special_pixel in images:
             images = [u for u in images if u != special_pixel]
@@ -147,6 +179,37 @@ def process_mail(job: Dict[str, Any]) -> Dict[str, Any]:
             "open_result": open_result,
         })
         opened = open_result or opened
+        
+        # Log final opened status and source
+        opened_source = "none"
+        if special_pixel and pixel_result:
+            opened_source = "special_pixel"
+        elif open_result:
+            opened_source = "regular_images"
+        
+        logger.info("worker_open_final_status", extra={
+            "message_id": message_id,
+            "opened": opened,
+            "opened_source": opened_source,
+            "special_pixel_found": special_pixel is not None,
+            "special_pixel_fetch_success": pixel_result if special_pixel else None,
+            "regular_images_fetch_success": open_result,
+        })
+    else:
+        logger.info("worker_open_skipped", extra={
+            "message_id": message_id,
+            "reason": "probability_check_failed",
+            "roll": open_roll,
+            "threshold": settings.simulate_open_probability,
+        })
+        # Warn if probability is 1.0 but we're skipping
+        if settings.simulate_open_probability >= 1.0:
+            logger.warning("worker_open_skipped_despite_100_percent", extra={
+                "message_id": message_id,
+                "roll": open_roll,
+                "threshold": settings.simulate_open_probability,
+                "comparison_result": open_roll < settings.simulate_open_probability,
+            })
 
     clicks = 0
     click_roll = random.random()
