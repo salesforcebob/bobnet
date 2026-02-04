@@ -1,0 +1,45 @@
+//! BobNet Worker - High-performance async RabbitMQ consumer for email simulation.
+//!
+//! This worker processes email simulation jobs from a RabbitMQ queue,
+//! simulating email opens (fetching tracking pixels) and clicks (following links)
+//! with configurable probabilities and delays.
+
+mod config;
+mod consumer;
+mod html;
+mod processor;
+mod simulate;
+mod util;
+
+use anyhow::Result;
+use tracing_subscriber::{fmt, layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
+
+#[tokio::main]
+async fn main() -> Result<()> {
+    // Initialize structured JSON logging
+    let filter = EnvFilter::try_from_default_env()
+        .unwrap_or_else(|_| EnvFilter::new("info"));
+
+    tracing_subscriber::registry()
+        .with(filter)
+        .with(fmt::layer().json().flatten_event(true))
+        .init();
+
+    tracing::info!("worker_starting");
+
+    // Load configuration from environment
+    let config = config::Config::from_env();
+    tracing::info!(
+        cloudamqp_url_set = !config.cloudamqp_url.is_empty(),
+        open_probability = config.simulate_open_probability,
+        click_probability = config.simulate_click_probability,
+        max_clicks = config.max_clicks,
+        concurrency = config.worker_concurrency,
+        "config_loaded"
+    );
+
+    // Start the consumer
+    consumer::run(config).await?;
+
+    Ok(())
+}

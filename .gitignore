@@ -6,3 +6,8 @@ __pycache__/
 *$py.class
 *.so
 .Python
+
+
+# Rust
+rust-worker/target/
+**/*.rs.bk

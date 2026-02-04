@@ -1,0 +1,8 @@
+# Heroku Rust buildpack configuration
+# See: https://github.com/emk/heroku-buildpack-rust
+
+# Set the Rust version (stable by default)
+VERSION=stable
+
+# Path to the Cargo.toml (relative to repo root)
+# BUILD_PATH=rust-worker
