@@ -23,7 +23,9 @@ The system uses a **two-queue architecture** for maximum webhook throughput:
 - **Cost-efficient inbound email processing via Cloudflare** (free tier available, Workers-based)
 - **High-throughput webhook reception** - web server responds in microseconds
 - Randomized open simulation via direct pixel fetch (default)
-  - Prioritizes ExactTarget/Salesforce Marketing Cloud open pixels (`cl.s4.exct.net/open.aspx`)
+  - Prioritizes Salesforce Marketing Cloud open pixels:
+    - SFMC Classic/ExactTarget: `cl.s4.exct.net/open.aspx`
+    - SFMC Advanced: `tracking.e360.salesforce.com/open`
   - Falls back to fetching other image resources in the email
 - Randomized click simulation with domain allow/deny filters
 - **Two-queue RabbitMQ architecture** for burst handling (CloudAMQP)
@@ -157,25 +159,6 @@ You can also set individual click rates on specific links using the `data-click-
 1. **Value Range:** All rate values are clamped to `0.0` - `1.0` (values below 0 become 0.0, values above 1.0 become 1.0)
 2. **Combined Attributes:** Both `data-open-rate` and `data-click-rate` can be in the same `<div data-scope="global">` element - this is the recommended approach
 3. **Multiple Global Divs:** If multiple `<div data-scope="global">` elements are found, both functions will use the first div that contains their respective attribute (a warning is logged if multiple divs exist)
-
-#### Unsubscribe Link Filtering
-
-**ExactTarget unsubscribe links are automatically excluded from click simulation** unless they have an explicit `data-click-rate` override.
-
-Unsubscribe links matching the pattern `https://cl.S4.exct.net/unsub_center.aspx` (case-insensitive) will be filtered out during link selection to prevent accidental unsubscribes.
-
-**To allow clicking an unsubscribe link**, add a `data-click-rate` attribute:
-
-```html
-<a href="https://cl.S4.exct.net/unsub_center.aspx?email=test@example.com" data-click-rate="0.1">
-  Unsubscribe
-</a>
-```
-
-**Behavior:**
-- Unsubscribe links **without** `data-click-rate` are **never clicked** (filtered out)
-- Unsubscribe links **with** `data-click-rate` are **eligible for clicking** based on their rate
-- This protection applies regardless of global click rate settings or domain allow/deny lists
 
 ## Local Development
 
@@ -435,7 +418,7 @@ The `Procfile` defines:
 
 **Worker (`bobnet-worker`):**
 - Consumes from `email_simulator` queue
-- Opens: Fetches tracking pixels (prioritizes ExactTarget)
+- Opens: Fetches tracking pixels (prioritizes SFMC Classic and Advanced open pixels)
 - Clicks: Weighted link selection with domain filtering
 - User agent rotation
 - Connection pooling via reqwest
@@ -449,8 +432,26 @@ The `Procfile` defines:
 
 ### Simulation
 - Default open simulation uses direct `img` fetches; enable headless path only if required
-- Open simulation prioritizes ExactTarget/Salesforce Marketing Cloud open pixels (`cl.s4.exct.net/open.aspx`)
+- Open simulation prioritizes Salesforce Marketing Cloud open pixels:
+  - SFMC Classic/ExactTarget: `cl.s4.exct.net/open.aspx`
+  - SFMC Advanced: `tracking.e360.salesforce.com/open`
 - Attachments are ignored; payload size should be limited upstream
+
+### Unsubscribe Link Filtering
+
+Salesforce Marketing Cloud unsubscribe links are automatically filtered from click simulation to avoid unintentional unsubscribes. This includes:
+
+- **SFMC Classic/ExactTarget**: URLs containing `cl.s4.exct.net/unsub_center.aspx`
+- **SFMC Advanced**: URLs containing `tracking.e360.salesforce.com/unsubscribe`
+
+**To enable clicking unsubscribe links**, add a `data-click-rate` override to the link:
+
+```html
+<a href="https://cl.s4.exct.net/unsub_center.aspx?..." data-click-rate="0.1">Unsubscribe</a>
+<a href="https://tracking.e360.salesforce.com/unsubscribe?..." data-click-rate="0.1">Unsubscribe</a>
+```
+
+Without an explicit `data-click-rate` attribute, unsubscribe links will never be clicked.
 
 ### Reliability
 - Messages are acknowledged after successful processing

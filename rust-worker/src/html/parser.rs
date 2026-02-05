@@ -42,10 +42,12 @@ pub fn extract_links(html: &str) -> Vec<String> {
     urls
 }
 
-/// Find the ExactTarget/SFMC open pixel URL if present.
+/// Find Salesforce Marketing Cloud open pixel URL if present.
 ///
-/// Searches for an `<img>` whose src contains `://cl.s4.exct.net/open.aspx`.
-pub fn find_exacttarget_open_pixel(html: &str) -> Option<String> {
+/// Searches for an `<img>` whose src matches SFMC open pixel patterns:
+/// - ExactTarget/SFMC Classic: `://cl.s4.exct.net/open.aspx`
+/// - SFMC Advanced: `tracking.e360.salesforce.com/open`
+pub fn find_sfmc_open_pixel(html: &str) -> Option<String> {
     let document = Html::parse_document(html);
     let selector = Selector::parse("img[src]").expect("Invalid selector");
 
@@ -54,29 +56,30 @@ pub fn find_exacttarget_open_pixel(html: &str) -> Option<String> {
     info!(
         total_img_tags = all_imgs.len(),
         html_length = html.len(),
-        "Searching for open pixel"
+        "Searching for SFMC open pixel"
     );
 
     for (idx, img) in all_imgs.iter().enumerate() {
         if let Some(src) = img.value().attr("src") {
             let low = src.to_lowercase();
-            let matches = low.contains("://cl.s4.exct.net/open.aspx");
+            let matches = low.contains("://cl.s4.exct.net/open.aspx")
+                || low.contains("tracking.e360.salesforce.com/open");
 
             debug!(
                 img_index = idx,
                 src_length = src.len(),
                 matches_pattern = matches,
-                "Checking image for open pixel"
+                "Checking image for SFMC open pixel"
             );
 
             if matches {
-                info!(img_index = idx, url = src, "Found open pixel");
+                info!(img_index = idx, url = src, "Found SFMC open pixel");
                 return Some(src.to_string());
             }
         }
     }
 
-    info!(total_imgs_checked = all_imgs.len(), "Open pixel not found");
+    info!(total_imgs_checked = all_imgs.len(), "SFMC open pixel not found");
     None
 }
 
@@ -291,7 +294,7 @@ mod tests {
     }
 
     #[test]
-    fn test_find_exacttarget_open_pixel() {
+    fn test_find_sfmc_classic_open_pixel() {
         let html = r#"
             <html>
                 <img src="https://example.com/logo.png">
@@ -300,20 +303,35 @@ mod tests {
             </html>
         "#;
 
-        let pixel = find_exacttarget_open_pixel(html);
+        let pixel = find_sfmc_open_pixel(html);
         assert!(pixel.is_some());
         assert!(pixel.unwrap().contains("cl.s4.exct.net/open.aspx"));
     }
 
     #[test]
-    fn test_find_exacttarget_open_pixel_not_found() {
+    fn test_find_sfmc_advanced_open_pixel() {
+        let html = r#"
+            <html>
+                <img src="https://example.com/logo.png">
+                <img src="https://tracking.e360.salesforce.com/open?id=abc123&subscriber=test">
+                <img src="https://other.com/pixel.gif">
+            </html>
+        "#;
+
+        let pixel = find_sfmc_open_pixel(html);
+        assert!(pixel.is_some());
+        assert!(pixel.unwrap().contains("tracking.e360.salesforce.com/open"));
+    }
+
+    #[test]
+    fn test_find_sfmc_open_pixel_not_found() {
         let html = r#"
             <html>
                 <img src="https://example.com/logo.png">
             </html>
         "#;
 
-        let pixel = find_exacttarget_open_pixel(html);
+        let pixel = find_sfmc_open_pixel(html);
         assert!(pixel.is_none());
     }
 

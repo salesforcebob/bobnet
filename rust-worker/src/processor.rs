@@ -13,7 +13,7 @@ use tracing::info;
 
 use bobnet::config::Config;
 use bobnet::html::{
-    extract_image_sources, extract_links_with_rates, find_exacttarget_open_pixel,
+    extract_image_sources, extract_links_with_rates, find_sfmc_open_pixel,
     find_global_click_rate, find_global_open_rate,
 };
 use bobnet::simulate::clicker::{choose_links_weighted, filter_links_with_rates, perform_clicks};
@@ -139,8 +139,8 @@ pub async fn process_job(client: &Client, config: &Config, job: &Job) -> Process
     );
 
     if will_attempt_open {
-        // Look for ExactTarget/SFMC open pixel first
-        let special_pixel = find_exacttarget_open_pixel(html);
+        // Look for SFMC open pixel first (supports Classic and Advanced editions)
+        let special_pixel = find_sfmc_open_pixel(html);
         let mut images = extract_image_sources(html);
 
         info!(
